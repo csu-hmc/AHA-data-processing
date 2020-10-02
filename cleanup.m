@@ -1,5 +1,5 @@
 function [d] = cleanup(d)
-% interpolate missing markers
+% interpolate missing markers when gaps are small
 % gaps that are too large are replaced by NaN (not a number)
 %
 % Input:
