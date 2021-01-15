@@ -11,36 +11,13 @@ import org.opensim.modeling.*
 %% Construct an opensimC3D object with input c3d path
 % Constructor takes full path to c3d file and an integer for forceplate
 % representation (1 = COP).
-% if exist('tmp.mat')
-%     % this is used during testing to make it faster
-%     load('tmp.mat')
-% else
-    fprintf('Opening %s...\n', c3d_filename);
-    fprintf('This will take several minutes.\n');
-    c3d = osimC3D(c3d_filename,0);
+fprintf('Opening %s...\n', c3d_filename);
+fprintf('This will take several minutes.\n');
+c3d = osimC3D(c3d_filename,0);
 
-    %% Get some stats...
-    % Get the number of marker trajectories
-    % nMarkers = c3d.getNumTrajectories();
-    % Get the marker data rate
-    % rMarkers = c3d.getRate_marker();
-    % Get the number of forces
-    % nForces = c3d.getNumForces();
-    % Get the force data rate
-    % rForces = c3d.getRate_force();
-
-    % Get Start and end time
-    % t0 = c3d.getStartTime();
-    % tn = c3d.getEndTime();
-
-    %% Rotate the data ?
-    % c3d.rotateData('x',-90)
-
-    %% Get the c3d data as Matlab Structures
-    fprintf('Extracting data...\n');
-    [markerStruct forceStruct] = c3d.getAsStructs();
-%     save('tmp.mat','markerStruct','forceStruct');
-% end
+% Get the c3d data as Matlab Structures
+fprintf('Extracting data...\n');
+[markerStruct forceStruct] = c3d.getAsStructs();
 
 markernames = fieldnames(markerStruct);
 nFrames = size(markerStruct.time, 1);
