@@ -1,4 +1,4 @@
-% Testing the C3D to txt file conversion
+% Testing the C3D to txt file conversion on participant 4, POST test, trial 1
 folder = 'C:\Users\Ton\Documents\CSU\Lab\People\Osman\software\';
 
 % convert c3d to txt
