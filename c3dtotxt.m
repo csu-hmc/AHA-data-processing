@@ -1,7 +1,8 @@
 function c3dtotxt(c3d_filename, txt_filename)
 % converts a C3D file to txt
-% c3d_filename: the file with C3D data
-% txt_filename: the corresponding txt data, recorded with D-Flow, for synchronization
+% c3d_filename: the file with C3D data, marker data will come from here
+% txt_filename: the corresponding txt data, recorded with D-Flow, for
+% synchronization and force data
 % uses the Opensim C3D tools: https://simtk-confluence.stanford.edu:8443/display/OpenSim/C3D+(.c3d)+Files
 
 %% Load OpenSim libs
@@ -10,9 +11,10 @@ import org.opensim.modeling.*
 %% Construct an opensimC3D object with input c3d path
 % Constructor takes full path to c3d file and an integer for forceplate
 % representation (1 = COP).
-if exist('tmp.mat')
-    load('tmp.mat')
-else
+% if exist('tmp.mat')
+%     % this is used during testing to make it faster
+%     load('tmp.mat')
+% else
     fprintf('Opening %s...\n', c3d_filename);
     fprintf('This will take several minutes.\n');
     c3d = osimC3D(filename,0);
@@ -37,8 +39,8 @@ else
     %% Get the c3d data as Matlab Structures
     fprintf('Extracting data...\n');
     [markerStruct forceStruct] = c3d.getAsStructs();
-    save('tmp.mat','markerStruct','forceStruct');
-end
+%     save('tmp.mat','markerStruct','forceStruct');
+% end
 
 markernames = fieldnames(markerStruct);
 nFrames = size(markerStruct.time, 1);
