@@ -12,8 +12,7 @@ data1 = importdata(txt_filename);  % the original data
 txt_filename = strrep(c3d_filename, '.c3d', '.txt');
 data2 = importdata(txt_filename);  % the data converted from c3d
 
-% compare each channel in the new file to the corresponding channel in the
-% old file
+% compare each channel in the new file to the corresponding channel in the original file
 close all
 for col2 = 1:numel(data2.colheaders)
     varname = data2.colheaders{col2};  % name of variable i in data 2
