@@ -101,8 +101,8 @@ end
 % to do: COP should be calculated from Moment (but we don't use it)
 
 %% Write the marker and force data to .txt file
-% marker data will come from the C3D
-% force data will be copied from the original TXT file
+% marker data will come from the C3D file
+% time stamp, frame number, and force data will be copied from the original TXT file
 forcevar = {'FP1.CopX','FP1.CopY','FP1.CopZ','FP1.ForX','FP1.ForY','FP1.ForZ','FP1.MomX','FP1.MomY','FP1.MomZ', ...
             'FP2.CopX','FP2.CopY','FP2.CopZ','FP2.ForX','FP2.ForY','FP2.ForZ','FP2.MomX','FP2.MomY','FP2.MomZ'};
 filename = strrep(c3d_filename, '.c3d', '.txt');  % change .c3d to .txt in the file name
@@ -128,8 +128,8 @@ fprintf(fid,'\n');  % end of line
 
 % write the data
 for i = 1:nFramesTxt
-    fprintf(fid,'%f',0.01*(i-1));  % write time stamp in seconds
-    fprintf(fid,'\t%d',i);        % write frame number
+    fprintf(fid,'%f',data.data(i,1));          % write time stamp from original TXT file
+    fprintf(fid,'\t%d',data.data(i,2));        % write frame number from original TXT file
     for j = 1:nMarkers
         fprintf(fid,'\t%f', markerdata(i,j,:));  % write x,y,z of this marker
     end

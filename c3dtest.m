@@ -17,22 +17,20 @@ data2 = importdata(txt_filename);  % the data converted from c3d
 close all
 for col2 = 1:numel(data2.colheaders)
     varname = data2.colheaders{col2};  % name of variable i in data 2
-    if findstr(varname,'FP')
-        col1 = find(strcmp(data1.colheaders, varname));  % column number in data1
-        d1 = data1.data(:,col1);
-        d2 = data2.data(:,col2);
+    col1 = find(strcmp(data1.colheaders, varname));  % column number in data1
+    d1 = data1.data(:,col1);
+    d2 = data2.data(:,col2);
 
-        % if variable name includes 'Pos', replace zeros by NaN so they are not plotted
-        if findstr(varname,'Pos')
-            d1(~d1) = nan;  % replace zeros (missing markers) by NaN, so plot does not show those
-            d2(~d2) = nan;
-        end
-
-        plot([d1 d2]);
-        legend('original TXT file','TXT converted from C3D');
-        title(varname);
-        disp('Hit ENTER to continue');
-        pause
+    % if variable name includes 'Pos', replace zeros by NaN so they are not plotted
+    if findstr(varname,'Pos')
+        d1(~d1) = nan;  % replace zeros (missing markers) by NaN, so plot does not show those
+        d2(~d2) = nan;
     end
+
+    plot([d1 d2]);
+    legend('original TXT file','TXT converted from C3D');
+    title(varname);
+    disp('Hit ENTER to continue');
+    pause
 end
     
