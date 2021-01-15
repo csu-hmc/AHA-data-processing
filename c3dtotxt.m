@@ -17,7 +17,7 @@ import org.opensim.modeling.*
 % else
     fprintf('Opening %s...\n', c3d_filename);
     fprintf('This will take several minutes.\n');
-    c3d = osimC3D(filename,0);
+    c3d = osimC3D(c3d_filename,0);
 
     %% Get some stats...
     % Get the number of marker trajectories
