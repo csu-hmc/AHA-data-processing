@@ -15,3 +15,9 @@ To run the conversion automatically, there is a script c3dconvert.m that convert
 
 ## Analysis of normal gait
 (describe the code and the results that are produced)
+
+## Analysis of perturbation response
+(describe the code and the results that are produced)
+
+## Script for automated data processing of all trials
+(describe the code and how the results are stored/presented)
