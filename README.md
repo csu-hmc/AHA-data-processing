@@ -8,7 +8,7 @@
 4. Not strictly needed, but we recommend installing Notepad++ to read and edit text files, such as Mocap files and Log files.
 
 ## C3D to TXT file conversion
-This is needed for 
+This is needed when marker data has been edited offline using Cortex. Cortex will save the data as a C3D file.  Marker data from the C3D file must be converted into the Mocap TXT file format.
 
 ### c3dtotxt.m 
 c3dtotxt.m is a function to convert one file. You need to give it the name (full path) of the C3D file, and the name of the TXT Mocap file that was originally recorded on D-Flow. The original file has the force plate data that is used for the synchronization. This function will extract the marker data from the C3D file, synchronize it with the TXT file, and generate a new TXT file, which contains the force plate data from the original TXT file and the marker data from the C3D file.  The new TXT file has the same name as the original TXT file, but the .txt extension is replaced by _edited.txt.
@@ -19,9 +19,11 @@ For testing this function, there is a script c3dtest.m that converts trial 1 fro
 c3dbatch.m is a script that is set up to converts all c3d trials in a folder, or in a series of folders. To run this, the data needs to be organized as follows:
 * The C3D files must be named the same as the original TXT files, but with the .c3d extension e.g. Mocap0001.c3d.
 * The C3d Files must be in the same folder as the corresponding TXT files.
-* All folders to be be converted must be subfolders of one "data path" folder.  In c3dbatch, you should set up this data path for your computer.
+* All folders to be be converted must be subfolders of one "data path" folder.  In c3dbatch.m, you should set up this data path for your computer.
 
-During the conversion, a file c3dbatch.log is written with a record of what was done.  This file also reports, for each file, how much marker data was missing in the original TXT file, and how much is missing in the new TXT file. One marker missing in one frame is counted as one piece of missing data.
+During the conversion, a file c3dbatch.log is written with a record of what was done.  This file also reports, for each file, how much marker data was missing in the original TXT file, and how much is missing in the new TXT file. One marker missing in one frame is counted as one piece of missing data.  Inspect this file to make sure that everything went correctly.
+
+If a _edited.txt file already exists for a trial, the conversion is skipped for that trial, because it was already done. If you want to redo the conversion for that trial, simply delete the _edited.txt file before running c3dbatch.m.
 
 ### Possible issues
 * The C3D conversion has not been tested yet on a trial where the C3D recording started *before* the Mocap file.
