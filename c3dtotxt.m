@@ -59,7 +59,11 @@ nFramesTxt = size(data.data,1);
 result.missing_before = 0;
 for i = 1:nMarkers
     col = find(strcmp(data.colheaders, [markernames{i} '.PosX']));
-    nmissing = numel(find(~data.data(:,col)));  % find how many zeros in column
+    if isempty(col)     % this marker was not found in the original TXT file
+        nmissing = nFramesTxt;   % all frames are missing for this marker
+    else
+        nmissing = numel(find(~data.data(:,col)));  % find how many zeros in column
+    end
     % fprintf('%s in TXT has %d missing data\n',data.colheaders{col},nmissing);
     result.missing_before = result.missing_before + nmissing;
 end
@@ -146,7 +150,7 @@ for i = 1:ncopy
         fprintf(fid,'\t%f', markerdata(i,j,:));  % write x,y,z of this marker
     end
     for j = 1:numel(forcevar)
-        col = strcmp(data.colheaders, forcevar{j});  % column number for this force variable
+        col = strcmp(data.colheaders, forcevar{j});   % column number for this force variable
         fprintf(fid,'\t%f', data.data(iframe,col));   % write the value of this force variable in frame i
     end
     fprintf(fid,'\n');  % end of line

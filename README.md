@@ -6,6 +6,9 @@
 2. Opensim.  This is only needed for converting the C3D files to TXT files. Tests were done with Opensim 4.0, but later versions will probably work also.
 3. Opensim-Matlab interface. To set this up, follow the instructions on https://simtk-confluence.stanford.edu/display/OpenSim/Scripting+with+Matlab.
 4. Not strictly needed, but we recommend installing Notepad++ to read and edit text files, such as Mocap files and Log files.
+5. Software to manage the repository on your computer. For Windows, we recommend Github Desktop
+
+If you have not done so yet, clone this Github repository.  On Windows, the repository will usually show up in your Documents/Github folder. Use the main repository folder, named AHA-data-processing, as the working directory in Matlab when running the code.
 
 ## C3D to TXT file conversion
 This is needed when marker data has been edited offline using Cortex. Cortex will save the data as a C3D file.  Marker data from the C3D file must be converted into the Mocap TXT file format.
@@ -21,13 +24,16 @@ c3dbatch.m is a script that is set up to converts all c3d trials in a folder, or
 * The C3d Files must be in the same folder as the corresponding TXT files.
 * All folders to be be converted must be subfolders of one "data path" folder.  In c3dbatch.m, you should set up this data path for your computer.
 
-During the conversion, a file c3dbatch.log is written with a record of what was done.  This file also reports, for each file, how much marker data was missing in the original TXT file, and how much is missing in the new TXT file. One marker missing in one frame is counted as one piece of missing data.  Inspect this file to make sure that everything went correctly.
+During the conversion, a file c3dbatch.log is written with a record of what was done.  This file also reports, for each file, how much marker data was missing in the original TXT file, and how much is missing in the new TXT file. One marker missing in one frame is counted as one piece of missing data.  Inspect this file to make sure that everything went correctly.  If something does not look good, report it.
 
 If a _edited.txt file already exists for a trial, the conversion is skipped for that trial, because it was already done. If you want to redo the conversion for that trial, simply delete the _edited.txt file before running c3dbatch.m.
 
+If the conversion fails for one file, try to fix the problem (it may be a bug) or ask Ton for help.  After the problem is fixed, simply restart c3dbatch.m. It will automatically skip those files that were already converted, and continue from where it stopped.
+
 ### Possible issues
-* The C3D conversion has not been tested yet on a trial where the C3D recording started *before* the Mocap file.
-* The C3D conversion will not work yet on trials where the TXT file does not have labeled data for all 47 markers.  This can easily be fixed.
+This has only been tested on trial 1 in the Participant 4, Post-test folder.  It is possible that the conversion does not work for some other files.  If so, please report the problem, which trial it is, and what information is written on the screen.  Some possible issues that may occur:
+* If the C3D recording started *before* the Mocap file, there is code to handle that, but this has not been tested because it did not occur in the test file.
+* If the original TXT file does not have labeled data for all 47 markers, the conversion should still work but this has not been tested yet either.
 
 ## Analysis of normal gait
 (describe the code and the results that are produced)
