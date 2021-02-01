@@ -53,3 +53,5 @@ dkms.conf
 *.asv
 *.mat
 *.log
+tmp.pdf
+tmp.ps
