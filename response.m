@@ -50,17 +50,32 @@ function result = response(filename)
     Rkneeangle = 180/pi * kneeangles(mocapdata, 'R');
     Lkneeangle = 180/pi * kneeangles(mocapdata, 'L');
     
+    % calculate knee angle (or whatever else we want to use to quantify the
+    % perturbation response)
+    Rhipangle = 180/pi * hipangles(mocapdata, 'R');
+    Lhipangle = 180/pi * hipangles(mocapdata, 'L');
+    
+    % anterior position of heel relative to sacrum
+    Rheelpos = footplacement(mocapdata, 'R');
+    Lheelpos = footplacement(mocapdata, 'L'); 
+    
     % plot all cycles before perturbation
     % and superimpose the cycle in which perturbation happened
     avcycles(mocaptimes, Rkneeangle, Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 RIGHT KNEE ANGLE');
 	avcycles(mocaptimes, Lkneeangle, Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 LEFT KNEE ANGLE');
+    avcycles(mocaptimes, Rhipangle, Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 RIGHT HIP ANGLE');
+	avcycles(mocaptimes, Lhipangle, Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 LEFT HIP ANGLE');
+    avcycles(mocaptimes, -Rheelpos(:,3), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 R anterior foot pos');
+    avcycles(mocaptimes, -Lheelpos(:,3), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 L anterior foot pos');
+    avcycles(mocaptimes, Rheelpos(:,1), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 R lateral foot pos');
+    avcycles(mocaptimes, -Lheelpos(:,1), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 L lateral foot pos');
     
     % also take a look at sacrum XYZ trajectories
     % (we can also use Center of Mass, as defined in the MOS analysis)
     Sacrum = marker(mocapdata, 'SACR');
-    avcycles(mocaptimes, Sacrum(:,1), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 SACRUM X');
-    avcycles(mocaptimes, Sacrum(:,2), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 SACRUM Y');
-    avcycles(mocaptimes, Sacrum(:,3), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 SACRUM Z');
+    avcycles(mocaptimes, Sacrum(:,1), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 SACRUM X(right)');
+    avcycles(mocaptimes, Sacrum(:,2), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 SACRUM Y(up)');
+    avcycles(mocaptimes, Sacrum(:,3), Rhs, PRhs, perturbtime, 'Par3 PRE Mocap0001 SACRUM Z(posterior)');
 
 end
 %========================================================
@@ -144,12 +159,36 @@ function [angles] = kneeangles(data, side)
     angles = asin(crossnorm ./ thighnorm ./ shanknorm);
     
 end
+%==========================================================
+function [pos] = footplacement(data, side)
+    % calculate position of heel relative to sacrum
+    Heel   = marker(data, [side 'HEE']);
+    Sacrum  = marker(data, 'SACR');
+    pos = Heel - Sacrum;   
+end
 %======================================================
 function xyz = marker(data, name)
 % extract a 3D marker trajectory from data
 	colX  = findcolumn(data, [name '.PosX']);
     % grab three successive columns from data.data
     xyz = data.data(:,colX+(0:2));
+end
+%=======================================================
+function [angles] = hipangles(data, side)
+    Hip   = marker(data, [side 'GTRO']);
+    Knee  = marker(data, [side 'LEK']);
+    Shoulder = marker(data, [side 'SHO']);
+    
+    % construct unit vectors from shoulder to hip and hip to knee
+    trunk = Hip - Shoulder;
+    thigh = Knee - Hip;
+    crossnorm = vecnorm(cross(trunk,thigh),2,2);  % norm of the cross product
+    thighnorm = vecnorm(thigh,2,2);               % norm of the thigh vector
+    trunknorm = vecnorm(trunk,2,2);               % norm of the shank vector
+    
+    % angle is inverse sine of (cross product divided by both vector norms)
+    angles = asin(crossnorm ./ thighnorm ./ trunknorm);
+    
 end
 %======================================================
 function [L_hs, R_hs] = heelstrikes(data)
