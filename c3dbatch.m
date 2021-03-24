@@ -19,7 +19,7 @@ function c3dbatch
     end
     
     % here we define which folders must be processed
-    folders = {'Par4_POST'};  % a cell array containing one or more folder names
+    folders = {'Par4_POST','Par5_POST'};  % a cell array containing one or more folder names
     
     % create a log file, or append to an existing log file if it exists
     logfile = 'c3dbatch.log';

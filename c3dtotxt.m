@@ -14,7 +14,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
 %
 % The C3D file reading is done using the Opensim C3D tools: https://simtk-confluence.stanford.edu:8443/display/OpenSim/C3D+(.c3d)+Files
 
-% During testing, we sometimes read the C3D data from tmp.mat because
+% During testing, we sometimes read the C3D data (as structures) from tmp.mat because
 % extracting data from the C3D file is very slow
 if exist('tmp.mat')
     load('tmp.mat');
@@ -30,7 +30,7 @@ else
 
     % Get the c3d data as Matlab Structures
     fprintf('Extracting data...\n');
-    [markerStruct forceStruct] = c3d.getAsStructs();
+    [markerStruct, forceStruct] = c3d.getAsStructs();
     % save('tmp.mat','markerStruct','forceStruct');  % use this only for testing
 end
 
@@ -69,7 +69,7 @@ for i = 1:nMarkers
 end
 
 % get the same Fy1 signal from the original D-Flow TXT file
-iFy1 = find(strcmp(data.colheaders,'FP1.ForY'));  % channel number for FP1.ForY
+iFy1 = strcmp(data.colheaders,'FP1.ForY');  % channel number for FP1.ForY
 Fy1 = data.data(:,iFy1);                          % FP1.ForY signal from the TXT file
 
 % find the time shift using peak of the cross correlation function
