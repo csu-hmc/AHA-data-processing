@@ -289,6 +289,16 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)
     Cinv = inv(C);
    
     % impute missing data using idea from Rasmussen 2020
+    % for each frame, we reconstruct the missing markers by finding
+    % coordinates that put this frame closest (using Mahalanobis Distance, MD)
+    % to the mean (mu).
+    % this is an optimization problem with an analytical solution
+    % partition the inverse covariance matrix into parts corresponding to
+    % observed coordinates (o) and missing coordinates (m)
+    % Cinv = [Coo Com]  this is a symmetrical matrix, so Com = Cmo'
+    %        [Cmo Cmm]
+    % we minimize MD=(x-mu)'*Cinv*(x-mu), subject to x(o) = xo (observed data)
+    % the solution is: x(m) = mu(m) - inv(Cmm)*Cmo*(xo-mu(o))
     disp('Estimating missing data...');
     tic
     for i = 1:nsamples
