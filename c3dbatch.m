@@ -11,15 +11,15 @@ function c3dbatch
     computer = getenv('COMPUTERNAME');
     if strcmp(computer, 'LRI-102855')   % Ton's computer
         datapath = 'C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\';
-    elseif strcmp(computer, '...hala computer name here...')   % Hala's computer
-        datapath = '...path to data folders on hala computer';
+    elseif strcmp(computer, 'DESKTOP-0HN0T6U')   % Hala's computer
+        datapath = 'C:\Users\hallo\OneDrive - Cleveland State University\Hala data\';
     else
         fprintf('Your computer name is: %s\n', computer);
         fprintf('Please configure c3dbatch.m for your computer.\n');
     end
     
     % here we define which folders must be processed
-    folders = {'Par4_POST','Par5_POST'};  % a cell array containing one or more folder names
+    folders = {'Par7_POST'};  % a cell array containing one or more folder names
     
     % create a log file, or append to an existing log file if it exists
     logfile = 'c3dbatch.log';
@@ -41,9 +41,7 @@ function c3dbatch
         
         % go through all the trials for which c3d files were found
         for j = 1:numel(files)
-            if ~strcmp(files(j).name, 'Mocap0001.c3d')   % for testing only
-                break
-            end
+            
             % write something on the log file
             fid = fopen(logfile,'a');
             if (fid < 0)
