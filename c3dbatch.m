@@ -22,11 +22,12 @@ function c3dbatch
     folders = {'Par7_POST'};  % a cell array containing one or more folder names
     
     % create a log file, or append to an existing log file if it exists
-    logfile = 'c3dbatch.log';
-    fid = fopen(logfile,'a');
+    logfile = 'c3d.log';
+    fid = fopen(logfile,'w');
     if (fid < 0)
         error('cannot write %s', logfile);
     end
+    fprintf(fid,'======================================\n');
     fprintf(fid,'c3dbatch processing started on %s\n', datetime);
     fclose(fid);
     
@@ -42,13 +43,6 @@ function c3dbatch
         % go through all the trials for which c3d files were found
         for j = 1:numel(files)
             
-            % write something on the log file
-            fid = fopen(logfile,'a');
-            if (fid < 0)
-                error('cannot write %s', logfile);
-            end
-            fprintf(fid,'   %s: ',[folders{i} '\' strrep(files(j).name,'.c3d','')]);
-
             % if edited file does not exist yet, run the conversion tool, to create ..._edited.txt
             c3d_filename = [folder files(j).name];
             txt_filename = strrep(c3d_filename, '.c3d', '.txt');
