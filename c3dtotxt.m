@@ -36,7 +36,7 @@ else
     c3d = osimC3D(c3d_filename,0);
 
     % Get the c3d data as Matlab Structures
-    fprintf('Extracting data... (will take approx. %.1f minutes for a 90-second trial)\n',10);
+    fprintf('Extracting data... (will take approx. 5 minutes for a 90-second trial)\n');
     tic
     [markerStruct, forceStruct] = c3d.getAsStructs();
     fprintf('...it took %.1f minutes\n',toc/60);
@@ -45,6 +45,7 @@ end
 
 markernames = fieldnames(markerStruct);
 nFrames = size(markerStruct.time, 1);
+fprintf('C3D file has %d frames\n', nFrames);
 nMarkers = numel(markernames) - 1;  % the last "marker" in the c3d is actually time
 
 % downsample Fy1 data from 1000 Hz to 100 Hz by averaging 10 sequential force
@@ -53,20 +54,17 @@ nforcesamples = size(forceStruct.f1,1);
 if nforcesamples ~= 10*nFrames
     error('c3dtotxt.m: number of force samples in c3d is not 10x number of frames');
 end
-fpmdata = zeros(nFrames,18); % to store force,CoP,moment from the two force plates
-fpmnames = {'FP1.ForX','FP1.ForY','FP1.ForZ','FP1.CopX','FP1.CopY','FP1.CopZ','FP1.MomX','FP1.MomY','FP1.MomZ', ...
-            'FP2.ForX','FP2.ForY','FP2.ForZ','FP2.CopX','FP2.CopY','FP2.CopZ','FP2.MomX','FP2.MomY','FP2.MomZ'};
+Fy1c3d = zeros(nFrames,1); % to store vertical force from forceplate 1 in C3D data
 for i = 1:nFrames
     j = 10*(i-1) + (1:10);  % the 10 samples that must be averaged
     % also convert mm and Nmm to m and Nm
-    fpm = [ forceStruct.f1(j,:) forceStruct.p1(j,:)/1000 forceStruct.m1(j,:)/1000 ...
-            forceStruct.f2(j,:) forceStruct.p2(j,:)/1000 forceStruct.m2(j,:)/1000 ];
-    fpmdata(i,:)   = mean(fpm);  % take the average of the 10 samples
+    Fy1c3d(i)   = mean(forceStruct.f1(j,2));  % take the average of the 10 samples
 end
 
 % import the original TXT file and generate more reliable time stamps
 data = importdata(txt_filename);
 nFramesTxt = size(data.data,1);
+fprintf('TXT file has %d frames\n', nFramesTxt);
 data.data(:,1) = data.data(1,1) + (0:(nFramesTxt-1))*0.010;
 
 % remove spaces from the column headers
@@ -80,28 +78,56 @@ Fy1 = data.data(:,iFy1);                          % FP1.ForY signal from the TXT
 
 % find the time shift using peak of the cross correlation on Fy of force
 % plate 1
-[c,lags] = xcorr(Fy1,fpmdata(:,2),1000);  % max lag is 1000 frames (10 seconds)
+[c,lags] = xcorr(Fy1,Fy1c3d,1000);  % max lag is 1000 frames (10 seconds)
 [~,imax] = max(c);
 lag = lags(imax);
+if (lag > 500)
+    fprintf('WARNING: lag is larger than 5 seconds\n');
+    fprintf(log,'WARNING: lag is larger than 5 seconds\n');
+end
+
+% check the agreement between Fy1 from TXT and C3D in the first 10 seconds
+if (lag<0)
+    RMSdiff = rms(Fy1c3d(-lag+(1:1000))-Fy1(1:1000));
+else
+    RMSdiff = rms(Fy1c3d(1:1000)-Fy1(lag+(1:1000)));
+end    
+maxdiff = 10.0;   % we allow a difference of 10 N
+if (RMSdiff > maxdiff)
+    if (lag<0)
+        plot([Fy1(1:1000) Fy1c3d(-lag+(1:1000))]);
+    else
+        plot([Fy1(lag+(1:1000)) Fy1c3d(1:1000)]);
+    end 
+    legend('Fy1 TXT','Fy1 C3D')
+    fprintf('Vertical force of forceplate 1 does not agree within %.1f N\n',maxdiff);
+    error('It seems that TXT and C3D are not the same trial');
+end
 
 % set up the copying of marker data from c3d to txt
 if (lag > 0)
+    fprintf('C3D file started %d ms later than the D-Flow TXT file\n', 10*lag);
+    fprintf('   the new TXT file will have the first %d frames of the original TXT file\n', lag);
     fprintf(log,'C3D file started %d ms later than the D-Flow TXT file\n', 10*lag);
     fprintf(log,'   the new TXT file will have the first %d frames of the original TXT file\n', lag);
     txt_start = lag;   % start here when copying C3D data into the new txt file
     c3d_start = 0;       % start here when copying the c3d data
 elseif (lag < 0)
-    fprintf(log,'C3D file started %d ms earlier than the TXT file\n', 10*lag);
+    fprintf('C3D file started %d ms earlier than the TXT file\n', -10*lag);
+    fprintf(log,'C3D file started %d ms earlier than the TXT file\n', -10*lag);
     txt_start = 0;     
-    c3d_start = lag; 
+    c3d_start = -lag; 
 end
 
 mis = nFramesTxt - nFrames - lag;  % number of C3D frames missing at the end
 if (mis > 0)
+    fprintf('C3D file stopped %d ms earlier than the D-Flow TXT file\n', 10*mis);
+    fprintf('   the new TXT file will have the last %d frames of the original TXT file\n', mis);
     fprintf(log,'C3D file stopped %d ms earlier than the D-Flow TXT file\n', 10*mis);
     fprintf(log,'   the new TXT file will have the last %d frames of the original TXT file\n', mis);
     ncopy = nFrames - c3d_start;  % how many frames to copy from C3D to TXT
 elseif(mis < 0)
+    fprintf('C3D file stopped %d ms later than the D-Flow TXT file\n', 10*mis)
     fprintf(log,'C3D file stopped %d ms later than the D-Flow TXT file\n', 10*mis)
     ncopy = nFramesTxt - txt_start;
 end
@@ -111,6 +137,8 @@ colnames = {};
 for i=1:nMarkers
     colnames = [ colnames [markernames{i} '.PosX'] [markernames{i} '.PosY'] [markernames{i} '.PosZ'] ];
 end
+fpmnames = {'FP1.ForX','FP1.ForY','FP1.ForZ','FP1.CopX','FP1.CopY','FP1.CopZ','FP1.MomX','FP1.MomY','FP1.MomZ', ...
+            'FP2.ForX','FP2.ForY','FP2.ForZ','FP2.CopX','FP2.CopY','FP2.CopZ','FP2.MomX','FP2.MomY','FP2.MomZ'};
 colnames = [colnames fpmnames];  % add the force plate data column names
 txtcol = [];
 for i = 1:numel(colnames)
