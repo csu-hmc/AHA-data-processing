@@ -2,9 +2,19 @@
 % This is only used during development. For normal use, c3dbatch.m will be
 % more effective.
 
-% edit the following two lines so they point to your test trial:
-txt_filename = ['C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\Par4_POST\Mocap0001.txt'];
-c3d_filename = ['C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\Par4_POST\Mocap0001.c3d'];
+% here we define where the test file is
+% edit this code to match your computer
+computer = getenv('COMPUTERNAME');
+if strcmp(computer, 'LRI-102855')   % Ton's computer
+    datapath = 'C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\';
+elseif strcmp(computer, 'DESKTOP-0HN0T6U')   % Hala's computer
+    datapath = 'C:\Users\hallo\OneDrive - Cleveland State University\Hala data\';
+else
+    fprintf('Your computer name is: %s\n', computer);
+    fprintf('Please configure c3dbatch.m for your computer.\n');
+end
+txt_filename = [datapath 'Par7_PRE\Mocap0001.txt'];
+c3d_filename = [datapath 'Par7_PRE\Mocap0001.c3d'];
 
 % run the conversion tool, to create ...\Mocap0001_edited.txt
 result = c3dtotxt(c3d_filename, txt_filename);
