@@ -19,18 +19,23 @@ function c3dbatch
     end
     
     % here we define which folders must be processed
-    folders = {'Par7_PRE'};  % a cell array containing one or more folder names
+    % (eventually, this list should contain all folders, and we run this
+    % code once to make sure that all C3D files were processed the same
+    % way)
+    folders = {'Par7_POST'};  % a cell array containing one or more folder names
     
     % create a log file, or append to an existing log file if it exists
-    logfile = 'c3dbatch.log';
-    fid = fopen(logfile,'a');
+    logfile = 'c3d.log';
+    fid = fopen(logfile,'w');
     if (fid < 0)
         error('cannot write %s', logfile);
     end
+    fprintf(fid,'======================================\n');
     fprintf(fid,'c3dbatch processing started on %s\n', datetime);
     fclose(fid);
     
     % go through the folders in the folder list
+    forall = 0;
     for i = 1:numel(folders)
         folder = [datapath folders{i} '\']; 
         % get a list of all the c3d files in this folder
@@ -41,21 +46,27 @@ function c3dbatch
         
         % go through all the trials for which c3d files were found
         for j = 1:numel(files)
-            
-            % write something on the log file
             fid = fopen(logfile,'a');
             if (fid < 0)
                 error('cannot write %s', logfile);
             end
-            fprintf(fid,'   %s: ',[folders{i} '\' strrep(files(j).name,'.c3d','')]);
-
-            % if edited file does not exist yet, run the conversion tool, to create ..._edited.txt
+            
+            % generate the full file names
             c3d_filename = [folder files(j).name];
             txt_filename = strrep(c3d_filename, '.c3d', '.txt');
             edited_filename = strrep(c3d_filename, '.c3d', '_edited.txt');
+
+            % if edited file already exists, ask user what to do (or use
+            % their previous decision)
             if exist(edited_filename)
-                fprintf(fid,'_edited.txt already exists.  Skipping.\n');
-            else    
+                if ~forall
+                    [skip,forall] = askuser([edited_filename]);
+                end
+            else
+                skip = 0;
+            end
+            if ~skip
+                fprintf('Processing %s\n',c3d_filename);
                 result = c3dtotxt(c3d_filename, txt_filename);
                 if result.info == 0
                     fprintf(fid,'Done. Missing markers was %d, is now %d\n', result.missing_before, result.missing_after);
@@ -63,9 +74,42 @@ function c3dbatch
                     fprintf(fid,'Error in c3dtotxt.m. Please report the problem.\n', c3d_filename);
                     result
                 end
+            else
+                fprintf(fid,'Skipping %s\n', c3d_filename);
             end
             fclose(fid);
         end
     end
 end
+%=================================================
+function [skip, forall] = askuser(filename)
+    skip = 1;
+    forall = 0;
+    d = dialog('Position',[200 200 500 150],'Name','File exists');
+    uicontrol(d,'Style','text','Position',[20 100 460 40],'String',filename, ...
+        'FontSize',12,'FontWeight','bold', 'HorizontalAlignment','left');
+    uicontrol(d,'Style','text','Position',[20 50 300 40],'String','already exists.', ...
+        'FontSize',12,'FontWeight','bold', 'HorizontalAlignment','left');
+       
+    uicontrol(d,'Position',[15 20 80 25],'String','skip file','Callback',@button1, ...
+        'FontSize',12,'FontWeight','bold');
+    uicontrol(d,'Position',[110 20 80 25],'String','redo file','Callback',@button2, ...
+        'FontSize',12,'FontWeight','bold');
+    uicontrol(d,'Position',[205 20 170 25],'Style','checkbox','String','do this for all files', ...
+        'HorizontalAlignment','left','Callback',@box, ...
+        'Value',0,'FontSize',12,'FontWeight','bold');
+    uiwait(d);
     
+    function button1(src,event)
+        skip = 1;
+        delete(gcf);
+    end
+    function button2(src,event)
+        skip = 0;
+        delete(gcf);
+    end
+    function box(src,event)
+        forall = src.Value;
+    end
+end
+
