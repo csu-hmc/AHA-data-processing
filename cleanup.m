@@ -24,7 +24,11 @@ function [d] = cleanup(d)
             % if we don't have 2 frames, make this marker NaN for the whole trial
             if numel(goodframes) < 2
                 d.data(:,markercolumns) = NaN(nframes,3);
-                fprintf('%12s: COMPLETELY missing\n', colname(1:end-1));
+                % many TXT files contain a "S1" marker which is not real
+                % and does not have data, no need to report it
+                if ~contains(colname,'S1.Pos')
+                    fprintf('%12s: COMPLETELY missing\n', colname(1:end-1));
+                end
             else
                 % find large gaps, they should not be interpolated but replaced by NaN
                 interpframes = setdiff(1:nframes, goodframes);   % normally, we interpolate all frames that are missing
