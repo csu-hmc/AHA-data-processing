@@ -8,12 +8,12 @@ function result = response(filename)
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         testing = 1;
-        shortname = 'Par3_PRE\Mocap0001.txt';
+        shortname = 'Par2_PRE\Mocap0001.txt';
         computer = getenv('COMPUTERNAME');
         if strcmp(computer,'LRI-102855')
             filename = ['C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\' shortname];    
-        elseif strcmp(computer,'yourcomputername')
-            filename = ['yourdatafolder\' shortname];    
+        elseif strcmp(computer,'DESKTOP-0HN0T6U')
+            filename = ['C:\Users\hallo\OneDrive - Cleveland State University\Hala data\' shortname];    
         else
             fprintf('Your computername is: %s\n', computer);
             fprintf('Please edit response.m by changing yourcomputername and yourdatafolder in lines 15-16\n');
