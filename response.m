@@ -1,4 +1,4 @@
-function result = response(filename)
+function result = response(filename, options)
 % quantification of the perturbation response
 % 
 % Input:    filename........name of the mocap data file, must start with "Mocap"
@@ -8,7 +8,7 @@ function result = response(filename)
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         testing = 1;
-        shortname = 'Par2_PRE\Mocap0001.txt';
+        shortname = 'Par3_PRE\Mocap0008.txt';
         computer = getenv('COMPUTERNAME');
         if strcmp(computer,'LRI-102855')
             filename = ['C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\' shortname];    
@@ -27,18 +27,26 @@ function result = response(filename)
         testing = 0;
     end
     
+    % if no options are specified, set some defaults
+    if nargin < 2
+        options.filter = 1.0;    % use a 1 hz low pass filter for the Hotelling T-squared
+        options.pvalue = 0.001;  % threshold for detecing abnormal gait with the T-squared
+    end
+    
     % import the data
     mocapdata = importdata(filename);
     mocapdata = cleanup(mocapdata);   % interpolate missing markers, and insert NaN for large gaps
+    
+    % make new time stamps (we know that Cortex sends all frames at exactly
+    % 100 Hz
+    mocapdata.data(:,1) = mocapdata.data(1,1) + 0.01 * (0:(size(mocapdata.data,1)-1));
+    
     treadmillfile = strrep(filename,'Mocap','Treadmill');
     treadmilldata = importdata(treadmillfile);
     
     % resample the treadmill data at the same time stamps as the mocap data
     treadmilltimes = treadmilldata.data(:,1);  % column 1 of treadmill file
     mocaptimes     = mocapdata.data(:,1);      % column 1 of mocap file
-    % Note: currently we don't actually use the resampled treadmill data
-    tmdata = interp1(...
-        treadmilltimes, treadmilldata.data(:,2:end), mocaptimes);
     
     % find the frame and time when the perturbation happened
 	speedcol  = findcolumn(treadmilldata, 'Actual belt speed');
@@ -58,10 +66,10 @@ function result = response(filename)
     % the gaitdeviation function also estimates missing mocapdata
     if Lhs(PLhs) > Rhs(PRhs)    % which side was the last heelstrike before perturbation?
         fprintf('Left foot was in stance phase during perturbation\n');
-        [t1,t2,mocapdata] = gaitdeviation(mocapdata, Lhs, perturbtime);
+        [t1,t2,mocapdata] = gaitdeviation(mocapdata, Lhs, perturbtime, options);
     else
         fprintf('Right foot was in stance phase during perturbation\n');
-        [t1,t2,mocapdata] = gaitdeviation(mocapdata, Rhs, perturbtime);
+        [t1,t2,mocapdata] = gaitdeviation(mocapdata, Rhs, perturbtime, options);
     end
     
     if (testing)
@@ -259,7 +267,7 @@ function [L_hs, R_hs] = heelstrikes(data)
 
 end
 %=========================================================================================
-function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)   
+function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime, options)   
 % calculate gait deviation timing (t1,t2) using Mahalanobis Distance
 % and also estimate missing data
     global testing
@@ -271,9 +279,19 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)
 
     % find the columns with marker data and remove those with too many NaNs
     columns = find(contains(data.colheaders,'.Pos'))';
-    remove = find(sum(isnan(data.data(:,columns))) > 0.5*nsamples);
-    for i=1:numel(remove)
-        fprintf('gait deviation analysis will ignore %s\n', data.colheaders{columns(remove(i))});
+    remove = [];
+    for i=1:numel(columns)
+        perc_missing = 100*sum(isnan(data.data(:,columns(i)))) / nsamples;
+        if perc_missing > 50
+            remove = [remove i];  % add i to the remove list            
+            % generate a message once for each removed marker (but not S1,
+            % it is not an actual marker)
+            column_name = data.colheaders{columns(i)};
+            if contains(column_name,'.PosX') && ~contains(column_name,'S1.Pos')
+                marker_name = strrep(column_name,'.PosX','');
+                fprintf('gait deviation analysis will ignore %s, it has %.1f%% missing.\n', marker_name, perc_missing);
+            end
+        end
     end
     columns = setdiff(columns,columns(remove));  % these columns are kept
     ncolumns = numel(columns);
@@ -330,7 +348,7 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)
             
     % low-pass filter to smooth the T2 curve
     Fs = 1000;
-    Fc = 3;
+    Fc = options.filter;
     tnew = (t(hs(1)):(1/Fs):t(hs(end)))';  % resample to ensure constant sampling rate
     T2new = interp1(t,T2,tnew);
     [b,a] = butter(2,Fc/(Fs/2));
@@ -343,12 +361,17 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)
     p = fcdf(T2f*(n-np)/np/(n-1),np,n-np,'upper');
     
     % gait deviation measure is the duration of the period when p<threshold
-    threshold = 0.01;
+    threshold = options.pvalue;
     d = [0 ; diff(p<threshold)];  % diff detects when p went across the threshold
-    rt1 = tnew(find(d==1  & tnew>tperturb,1,'first'));  % first time that p went below threshold
-    rt2 = tnew(find(d==-1 & tnew>tperturb,1,'first'));  % first time that p went above threshold again
+    rt1 = tnew(find(d==1  & tnew>tperturb,1,'first'));  % first time after the perturbation that p went below threshold
+    rt2 = tnew(find(d==-1 & tnew>tperturb,1,'first'));  % first time after the perturbation that p went above threshold again
     t1 = rt1 - tperturb;
     t2 = rt2 - tperturb;
+    % if t1 > t2, this means that the gait was already abnormal when the
+    % perturbation happened, so don't use it
+    if (t1>t2)
+        t1 = NaN;
+    end
     fprintf('Start    of perturbation recovery: %.3f s. after perturbation\n',t1);
     fprintf('End      of perturbation recovery: %.3f s. after perturbation\n',t2);
     fprintf('Duration of perturbation recovery: %.3f s.\n',t2-t1);
@@ -356,7 +379,7 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)
     % make a figure to illustrate what was calculated
     % (only when testing)
     if (testing)
-        xlim = [tperturb-2 tperturb+6]; % the time range we want to plot
+        xlim = [tperturb-2 tperturb+10]; % the time range we want to plot
         figure;
         subplot(2,1,1);
         plot(tnew,[T2new T2f]);
@@ -378,12 +401,14 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime)
         semilogy(xlim,[threshold threshold],'k--');
         set(gca,'YLim',ylim);
         set(gca,'XLim',xlim);
-        p = get(gca,'Position');  % we can use this to calculate coordinates relative to Figure window
-        xrel1 = p(1) + p(3)*(tperturb+[0 t1]-xlim(1))/diff(xlim);
-        xrel2 = p(1) + p(3)*(tperturb+[0 t2]-xlim(1))/diff(xlim);
-        yrel1 = p(2) + p(4)*( (log(threshold)-log(ylim(1)) )/diff(log(ylim)) - 0.1);
-        yrel2 = p(2) + p(4)*( (log(threshold)-log(ylim(1)) )/diff(log(ylim)) - 0.3);
-        annotation('textarrow',xrel1,[yrel1 yrel1],'String', num2str(t1,'t1 = %.3f s.'));
+        pos = get(gca,'Position');  % we can use this to calculate coordinates relative to Figure window
+        xrel1 = pos(1) + pos(3)*(tperturb+[0 t1]-xlim(1))/diff(xlim);
+        xrel2 = pos(1) + pos(3)*(tperturb+[0 t2]-xlim(1))/diff(xlim);
+        yrel1 = pos(2) + pos(4)*( (log(threshold)-log(ylim(1)) )/diff(log(ylim)) - 0.1);
+        yrel2 = pos(2) + pos(4)*( (log(threshold)-log(ylim(1)) )/diff(log(ylim)) - 0.3);
+        if ~isnan(t1)
+            annotation('textarrow',xrel1,[yrel1 yrel1],'String', num2str(t1,'t1 = %.3f s.'));
+        end
         annotation('textarrow',xrel2,[yrel2 yrel2],'String', num2str(t2,'t2 = %.3f s.'));
         
         % append to the tmp.ps file
