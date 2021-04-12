@@ -1,8 +1,8 @@
 function result = c3dtotxt(c3d_filename, txt_filename)
 % Marker data is extracted from a C3D file, synchronized with a previously
 % recorded mocap file from D-Flow.  A new mocap file is generated
-% containing the original force plate data, and the marker data from the
-% C3D file.
+% containing the original force plate data recorded in D-Flow, and the marker
+% data from the C3D file.
 % The name of the new mocap file is <original mocap filename>_edited.txt
 % result.nmissing_before  number of missing marker coordinates in original mocap fole
 % result.nmissing_after:   number of missing marker coordinates in new mocap fole
@@ -12,6 +12,23 @@ function result = c3dtotxt(c3d_filename, txt_filename)
 %   2: could not write the _edited.txt file
 %
 % The C3D file reading is done using the Opensim C3D tools: https://simtk-confluence.stanford.edu:8443/display/OpenSim/C3D+(.c3d)+Files
+
+    testing = (nargin == 0);    % if no file names are specified, we're testing
+    if (testing)
+        % here we define where the test file is
+        % edit this code to match your computer
+        computer = getenv('COMPUTERNAME');
+        if strcmp(computer, 'LRI-102855')   % Ton's computer
+            datapath = 'C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\';
+        elseif strcmp(computer, 'DESKTOP-0HN0T6U')   % Hala's computer
+            datapath = 'C:\Users\hallo\OneDrive - Cleveland State University\Hala data\';
+        else
+            fprintf('Your computer name is: %s\n', computer);
+            fprintf('Please configure c3dbatch.m for your computer.\n');
+        end
+        txt_filename = [datapath 'Par7_PRE\Mocap0001.txt'];
+        c3d_filename = [datapath 'Par7_PRE\Mocap0001.c3d'];
+    end
 
     % open the log file with 'a' (append)
     logfile = 'c3d.log';
@@ -89,17 +106,16 @@ function result = c3dtotxt(c3d_filename, txt_filename)
         end
     end
 
-    % ezc3d only has the first 4 characters of the marker name
-    % copy the marker names from the TXT file, and flag error if
-    % the matching is ambigious
-    % also remove 'FullBodyef:' when it occurs in the C3D marker name
+    % C3D sometimes only has the first 4 characters of the marker name
+    % so we try to match them.  
+    % also remove 'FullBodyef:' which sometimes occurs in a C3D marker name
     for i = 1:numel(c3dMarkerNames)
         c3dMarkerNames{i} = strrep(c3dMarkerNames{i},'FullBodyef:','');
         matches = find(strncmp(txtMarkerNames,c3dMarkerNames{i},4));
         if numel(matches) == 0
             error('Marker %s was not found in the original TXT file',c3dMarkerNames{i});
         elseif numel(matches) > 1
-            error('C3D marker %s has multiple matches in the TXT file')'
+            error('C3D marker %s has multiple matches in the TXT file')
         else
             c3dMarkerNames(i) = txtMarkerNames(matches);
         end
@@ -224,7 +240,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
         result.missing_after = result.missing_after + nmissingnew;
     end
 
-    % Write the marker and force data to .txt file
+    % Write the marker and force data to the new .txt file
     % marker data will come from the C3D file
     % time stamp, frame number, and force data will be copied from the original TXT file
     filename = strrep(txt_filename, '.txt', '_edited.txt');  % change .c3d to .txt in the file name
@@ -257,5 +273,44 @@ function result = c3dtotxt(c3d_filename, txt_filename)
 
     % info = 0 to indicate success
     result.info = 0;
+    
+    % if we are not testing, we are done and we exist this function
+    if ~testing
+        return
+    end
+    
+    % if testing, compare the original file to the new file
+    data1 = importdata(txt_filename);  % the original data
+    newtxt_filename = strrep(txt_filename, '.txt', '_edited.txt');  % this is the name of the new .txt file
+    data2 = importdata(newtxt_filename);  % the data converted from c3d
+
+    % remove spaces from column headers in the original file
+    for i = 1:numel(data1.colheaders)
+        data1.colheaders{i} = strrep(data1.colheaders{i},' ','');
+    end
+
+    % compare each channel in the new file to the corresponding channel in the original file
+    close all
+    t1 = data1.data(:,1);  % timestamp is in column 1
+    t2 = data2.data(:,1);
+    for col2 = 1:numel(data2.colheaders)
+        varname = data2.colheaders{col2};  % name of variable i in data 2
+        col1 = find(strcmp(data1.colheaders, varname));  % column number in data1
+        d1 = data1.data(:,col1);
+        d2 = data2.data(:,col2);
+
+        % if variable name includes 'Pos', replace zeros by NaN so they are not plotted
+        if findstr(varname,'Pos')
+            d1(~d1) = nan;  % replace zeros (missing markers) by NaN, so plot does not show those
+            d2(~d2) = nan;
+        end
+
+        plot(t2,d2,t1,d1);
+        xlabel('timestamp');
+        legend('TXT converted from C3D','original TXT file');
+        title(varname);
+        disp('Hit ENTER to continue or CTRL-C to stop');
+        pause
+    end
 
 end
