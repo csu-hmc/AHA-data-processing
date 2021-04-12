@@ -83,7 +83,11 @@ The same two issues are present in all other trials with C3D files in this folde
 Empty folder
 
 ## Par8_POST
-Empty folder
+In trial 7 the TXT file is only 49.88 seconds long.  The C3D data is 90 seconds, and shows that the participant is not walking in the last 40 seconds.  Treadmill may have been stopped.
+
+In the same trial, some marker data disagrees between the original TXT and the C3D file. Marker labeling seems to have changed.  Please verify that the C3D is good before using it.
+
+It would be good to also check the other trials in this folder.
 
 ## Par9_PRE
 Empty folder
