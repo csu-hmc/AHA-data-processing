@@ -41,31 +41,28 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     fprintf(log,'Processing %s...\n', c3d_filename);
     
     % read the C3D file with the ezc3d toolbox, if it is installed
+    tic;
     if which('ezc3dRead')
+        fprintf('Reading %s...\n   (will take 1-2 seconds for a 90-second trial)...\n', c3d_filename);
         c3d = ezc3dRead(c3d_filename);
         c3dMarkerNames = c3d.parameters.POINT.LABELS.DATA;
         c3dMarkerData = 0.001 * c3d.data.points;    % convert from mm to m
         c3dFy = -c3d.data.analogs(:,[3 9]);  % vertical force in force plate 1 and 2
     else
-        % ezc3d not installed, so use Opensim
+        fprintf('exc3d toolbox is not installed, continuing with OpenSim...\n');
         import org.opensim.modeling.*
-        fprintf('Opening %s...\n', c3d_filename);
+        fprintf('Reading %s...\n   (will take 5-10 minutes for a 90-second trial)...\n', c3d_filename);
         c3d = osimC3D(c3d_filename,0);
-
-        % Get the c3d data as Matlab Structures
-        fprintf('Extracting data... (will take approx. 5 minutes for a 90-second trial)\n');
-        tic
         [markerStruct, forceStruct] = c3d.getAsStructs();
-        fprintf('...it took %.1f minutes\n',toc/60);
         c3dMarkerNames = fieldnames(markerStruct);
         c3dMarkerNames = c3dMarkerNames(1:end-1);  % remove the last one, which is time
-        c3dNframes = size(markerStruct.time, 1);
         for i = 1:numel(c3dMarkerNames)
-            c3dMarkerdata(:,i,:) = 0.001 * markerStruct.(markernames{i})';
+            c3dMarkerdata(:,i,:) = 0.001 * markerStruct.(c3dMarkerNames{i})';
         end
         % extract the two vertical forces
         c3dFy = [forceStruct.f1(:,2) forceStruct.f2(:,2)];
     end
+    fprintf('...it took %.1f seconds\n',toc);
 
     c3dNframes = size(c3dMarkerData,3);
     c3dNmarkers = numel(c3dMarkerNames);  % the last "marker" in the c3d is actually time
