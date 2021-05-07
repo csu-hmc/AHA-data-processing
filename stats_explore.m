@@ -3,23 +3,45 @@ function stats_explore
     close all
 
     % load the data
-    datafile = '2021-04-16 data 8var 12part.xlsx';
+    datafile = '2021-04-23 data 8var 12part.xlsx';
     d = readcell(datafile);
     columns = [2 4:13];    % remove columns 1 (session) and 3 (initials)
     headers = d(1,columns);
     % extract 24 rows of data (12 participants pre and post)
     data = d(2:25,columns);
+    data(strcmp(data,'NaN')) = {NaN};   % put the value NaN where there is a string 'NaN'
     data = cell2mat(data);  % convert to matrix
+    d = data(:,end-7:end);  % select the columns with the 8 outcome variables
+    varnames = headers(end-7:end);
     
-    % calculate the first two principal components
-    d = data(:,end-7:end);  % these are the 8 outcome variables
-    [coeff,score,latent] = pca(d);
+    % do the Matlab PCA
+    nvar = size(d,2);
+    mu = mean(d);  % mean values of all variables
+    sd = std(d);
+    n = size(d,1);  % number of observations
+    drel = (d - repmat(mu,n,1)) ./ repmat(sd,n,1);  % data minus mean, normalized to SD
+    [coeff, score, latent]  = pca(drel);
     figure(1);
     subplot(2,2,1);
     plot(latent);
     xlabel('principal component');
     ylabel('eigenvalue');
     
+    % print the PCA loadings
+    fprintf('Principal Component loadings:\n');
+    fprintf('          ');
+    for i = 1:nvar
+        fprintf('     PC%d',i);
+    end
+    fprintf('\n');
+    for i = 1:nvar
+        fprintf('%10s',varnames{i});
+        for j = 1:nvar
+            fprintf('%8.3f',coeff(i,j));
+        end
+        fprintf('\n');
+    end
+ 
     % calculate the mahalanobis distance
     C = cov(d);  % covariance matrix
     mu = mean(d);
@@ -79,21 +101,20 @@ function stats_explore
     
     % list of dependent variables we want to explore
     depvars = {'MRP'};
+    depvars = headers(4:end);
     
-    % do RANOVA for each dependent variable in the list
-    % following the "Longitudinal Data" example in the help for "ranova"
+    % do 1-way ANOVA for each dependent variable in the list
     for i = 1:numel(depvars)
         depvar = depvars{i};
-        % extract the relevant columns from data and make a table for rmfit
+        % extract the relevant columns from data and make a matrix for anova1
         outcome_pre  = data_pre(:,strcmp(headers,depvar));
         outcome_post = data_post(:,strcmp(headers,depvar));
-
-        t = table(group,outcome_pre,outcome_post,...
-        'VariableNames',{'Group','PRE','POST'});
-
-        % fit the repeated measures model
-        rm = fitrm(t,'PRE,POST ~ Group','WithinDesign',Time,'WithinModel','orthogonalcontrasts');
-        ranovatbl = ranova(rm)
+        effect = outcome_post - outcome_pre;
+        for i = 1:3
+            m(:,i) = effect(find(group==i));
+        end
+        [p,tbl] = anova1(m,Group,'off');
+        fprintf('One-way ANOVA, effect of intervention on Pre-Post difference in %10s: p = %8.3f\n', depvar, p);
     end
     
 end
