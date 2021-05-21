@@ -1,5 +1,6 @@
 function stats_explore
 % exploring the statistical analysis
+
     close all
 
     % load the data
@@ -56,8 +57,7 @@ function stats_explore
     headers = [headers 'PC1' 'PC2'];
     data = [data score(:,1:2)];
     
-    % time and group factors
-    Time = [0 1]';          % pre and post time values
+    % group labels
     Group = {'PT','Slip','Gaming'}';
 
     % sort the data, so PRE of all participants is followed by POST of the
@@ -100,21 +100,45 @@ function stats_explore
     end
     
     % list of dependent variables we want to explore
-    depvars = {'MRP'};
-    depvars = headers(4:end);
+    % for example: depvars = {'MRP','PC1'};
+    depvars = headers(4:end);   % use all variables
     
     % do 1-way ANOVA for each dependent variable in the list
     for i = 1:numel(depvars)
         depvar = depvars{i};
-        % extract the relevant columns from data and make a matrix for anova1
+        fprintf('===========================================================================\n');
+        fprintf('Statistical analysis for variable: %s\n', depvar);
+        
+        % extract the relevant columns from data and make a (subj x group) matrix for ANOVA
         outcome_pre  = data_pre(:,strcmp(headers,depvar));
         outcome_post = data_post(:,strcmp(headers,depvar));
         effect = outcome_post - outcome_pre;
-        for i = 1:3
-            m(:,i) = effect(find(group==i));
+         for k = 1:3
+            m(:,k) = effect(find(group==k));
+         end
+        fprintf('Post-pre differences (4 subjects x 3 groups):\n')
+        m
+        
+        % Do the ANOVA
+        fprintf('One-way ANOVA results:\n');
+        [p,tbl,stats] = anova1(m,Group,'off');
+        fprintf('---------------------------------------------------\n');
+        fprintf('%7s %9s %5s %9s %7s %9s\n',tbl{1,:});
+        fprintf('---------------------------------------------------\n');
+        fprintf('%7s %9.4f %5d %9.5f %7.2f %9.4f\n',tbl{2,:});
+        fprintf('%7s %9.4f %5d %9.5f\n',tbl{3,1:4});
+        fprintf('%7s %9.4f %5d\n',tbl{4,1:3});
+        fprintf('---------------------------------------------------\n');
+
+        % do the pairwise comparisons, if one-way ANOVA had p<0.05
+        if (p<0.05)
+            [results,means] = multcompare(stats,'Display','off');
+            for j = 1:size(results,1)
+                group1 = Group{results(j,1)};
+                group2 = Group{results(j,2)};
+                fprintf('%6s vs. %6s: mean difference %8.3f (conf interval: %8.3f %8.3f) p=%8.3f\n', ...
+                    group1, group2, results(j,3:6))
+            end
         end
-        [p,tbl] = anova1(m,Group,'off');
-        fprintf('One-way ANOVA, effect of intervention on Pre-Post difference in %10s: p = %8.3f\n', depvar, p);
     end
-    
 end
