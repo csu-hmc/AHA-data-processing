@@ -22,7 +22,7 @@ function c3dbatch
     % (eventually, this list should contain all folders, and we run this
     % code once to make sure that all C3D files were processed the same
     % way)
-    folders = {'Par7_POST'};  % a cell array containing one or more folder names
+    folders = {'Par12_POST'};  % a cell array containing one or more folder names
     
     % create a log file, or append to an existing log file if it exists
     logfile = 'c3d.log';

@@ -26,7 +26,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             fprintf('Your computer name is: %s\n', computer);
             fprintf('Please configure c3dbatch.m for your computer.\n');
         end
-        trial = 'Par7_PRE\Mocap0001';
+        trial = 'Par10_PRE\Mocap0001';
         txt_filename = [datapath trial '.txt'];
         c3d_filename = [datapath trial '.c3d'];
     end
