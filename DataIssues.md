@@ -147,8 +147,8 @@ No edit was made, we will use the original files on OneDrive
 
 
 ## Par12_POST
-Empty folder
 No edit was made, we will use the original files on OneDrive 
+Folder now has all the c3d files. I used the c3dbatch.m (seems to work fine and FAST!) 
 
 
 
