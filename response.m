@@ -8,7 +8,7 @@ function result = response(filename, options)
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         testing = 1;
-        shortname = 'Par3_PRE\Mocap0008.txt';
+        shortname = 'Par3_PRE\Mocap0007.txt';
         computer = getenv('COMPUTERNAME');
         if strcmp(computer,'LRI-102855')
             filename = ['C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\' shortname];    
