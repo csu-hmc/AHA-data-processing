@@ -4,14 +4,17 @@ function result = c3dtotxt(c3d_filename, txt_filename)
 % containing the original force plate data recorded in D-Flow, and the marker
 % data from the C3D file.
 % The name of the new mocap file is <original mocap filename>_edited.txt
-% result.nmissing_before  number of missing marker coordinates in original mocap fole
-% result.nmissing_after:   number of missing marker coordinates in new mocap fole
-% result.info:
-%   0: success
-%   1: number of force samples on c3d file was not 10x number of marker samples 
-%   2: could not write the _edited.txt file
 %
-% The C3D file reading is done using the Opensim C3D tools: https://simtk-confluence.stanford.edu:8443/display/OpenSim/C3D+(.c3d)+Files
+% Output is a struct with the following fields:
+%   result.nmissing_before  number of missing marker coordinates in original mocap fole
+%   result.nmissing_after:   number of missing marker coordinates in new mocap fole
+%   result.info:
+%       0: success
+%       1: number of force samples on c3d file was not 10x number of marker samples 
+%       2: could not write the _edited.txt file
+%
+% The C3D file reading is done using the ezc3d toolbox (if installed) or with the
+% Opensim C3D tools: https://simtk-confluence.stanford.edu:8443/display/OpenSim/C3D+(.c3d)+Files
 
     testing = (nargin == 0);    % if no file names are specified, we're testing
     if (testing)
@@ -24,9 +27,9 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             datapath = 'C:\Users\hallo\OneDrive - Cleveland State University\Hala data\';
         else
             fprintf('Your computer name is: %s\n', computer);
-            fprintf('Please configure c3dbatch.m for your computer.\n');
+            fprintf('Please configure c3dtotxt.m for your computer.\n');
         end
-        trial = 'Par7_PRE\Mocap0001';
+        trial = 'Par12_POST\Mocap0001';
         txt_filename = [datapath trial '.txt'];
         c3d_filename = [datapath trial '.c3d'];
     end
@@ -49,7 +52,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
         c3dMarkerData = 0.001 * c3d.data.points;    % convert from mm to m
         c3dFy = -c3d.data.analogs(:,[3 9]);  % vertical force in force plate 1 and 2
     else
-        fprintf('exc3d toolbox is not installed, continuing with OpenSim...\n');
+        fprintf('ezc3d toolbox is not installed, continuing with OpenSim...\n');
         import org.opensim.modeling.*
         fprintf('Reading %s...\n   (will take 5-10 minutes for a 90-second trial)...\n', c3d_filename);
         c3d = osimC3D(c3d_filename,0);
@@ -79,11 +82,27 @@ function result = c3dtotxt(c3d_filename, txt_filename)
         c3dFyr(i,:)   = mean(c3dFy(j,:));  % take the average of the 10 samples
     end
 
-    % import the original TXT file and generate more reliable time stamps
+    % import the original TXT file and generate more reliable time stamps;
+    % we know that Cortex samples exactly every 10 ms
     data = importdata(txt_filename);
     txtNframes = size(data.data,1);
     fprintf('TXT file has %d frames\n', txtNframes);
+    if txtNframes > 20000
+        % this happened in Par12_POST: 300 Hz time stamps, more than 20000 frames
+        % use only the first 9000 frames
+        txtNframes = 9000;
+        data.data = data.data(1:txtNframes,:);
+        fprintf('TXT file truncated to %d frames\n', txtNframes);
+    end
     data.data(:,1) = data.data(1,1) + (0:(txtNframes-1))*0.010;
+%     else
+%         newtimestamps = (data.data(1,1) : 0.01 : data.data(end,1))';
+%         newframenumbers = (1:numel(newtimestamps))';
+%         newdata = interp1(data.data(:,1), data.data(:,3:end), newtimestamps);
+%         data.data = [ newtimestamps newframenumbers newdata ];
+%         txtNframes = size(data.data,1);
+%         fprintf('TXT file resampled to %d frames\n', txtNframes);
+%     end
 
     % remove any spaces from the column headers and collect txtMarkerNames
     txtMarkerNames = {};
@@ -93,7 +112,24 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             txtMarkerNames = [ txtMarkerNames strrep(data.colheaders{i},'.PosX','') ];
         end
     end
-
+    
+    % If there are no markers in the TXT file (this happened in Par12_POST),
+    % we add the standard 47-marker set and missing data for all markers and 
+    % all frames. This allows processing to continue, and C3D marker data will be used
+    if numel(txtMarkerNames) == 0
+        txtMarkerNames = {'LHEAD' 'THEAD' 'RHEAD' 'FHEAD' 'C7'   'T10'  'SACR' 'NAVE'  'XYPH'  'STRN'  ...
+                          'BBAC'  'LSHO'  'LDELT' 'LLEE'  'LMEE' 'LFRM' 'LMW'  'LLW'   'LFIN'  'RSHO'  ...
+                          'RDELT' 'RLEE'  'RMEE'  'RFRM'  'RMW'  'RLW'  'RFIN' 'LASIS' 'RASIS' 'LPSIS' ...
+                          'RPSIS' 'LGTRO' 'FLTHI' 'LLEK'  'LATI' 'LLM'  'LHEE' 'LTOE'  'LMT5'  'RGTRO' ...
+                          'FRTHI' 'RLEK'  'RATI'  'RLM'   'RHEE' 'RTOE' 'RMT5'};
+        for i = 1:numel(txtMarkerNames)
+            markername = txtMarkerNames{i};
+            columnnames = { [markername '.PosX'] [markername '.PosY'] [markername '.PosZ'] };
+            data.colheaders = [data.colheaders columnnames];
+        end
+        data.data = [ data.data zeros(txtNframes, 3*numel(txtMarkerNames)) ];
+    end
+             
     % C3D sometimes only has the first 4 characters of the marker name
     % so we try to match them.  
     % also remove 'FullBodyef:' which sometimes occurs in a C3D marker name
@@ -181,7 +217,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     txtcol = [];
     for i = 1:numel(colnames)
         if isempty(find(strcmp(data.colheaders,colnames{i})))
-            error('Column %s was not found in the original TXT file',colnames{i});
+            fprintf('Column %s was not found in the original TXT file; C3D data will be used',colnames{i});
         end
         txtcol = [txtcol find(strcmp(data.colheaders,colnames{i}))];
     end
@@ -290,24 +326,29 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     close all
     t1 = data1.data(:,1);  % timestamp is in column 1
     t2 = data2.data(:,1);
+    t1 = t1(1) + 0.01 * (0:numel(t1)-1);  % make new time stamps for data1 (original TXT)
     for col2 = 1:numel(data2.colheaders)
         varname = data2.colheaders{col2};  % name of variable i in data 2
         col1 = find(strcmp(data1.colheaders, varname));  % column number in data1
-        d1 = data1.data(:,col1);
-        d2 = data2.data(:,col2);
+        if isempty(col1)
+            fprintf('%s is not available in original TXT file\n', varname);
+        else
+            d1 = data1.data(:,col1);
+            d2 = data2.data(:,col2);
 
-        % if variable name includes 'Pos', replace zeros by NaN so they are not plotted
-        if findstr(varname,'Pos')
-            d1(~d1) = nan;  % replace zeros (missing markers) by NaN, so plot does not show those
-            d2(~d2) = nan;
+            % if variable name includes 'Pos', replace zeros by NaN so they are not plotted
+            if findstr(varname,'Pos')
+                d1(~d1) = nan;  % replace zeros (missing markers) by NaN, so plot does not show those
+                d2(~d2) = nan;
+            end
+
+            plot(t2,d2,t1,d1);
+            xlabel('timestamp');
+            legend('TXT converted from C3D','original TXT file');
+            title(varname);
+            disp('Hit ENTER to continue or CTRL-C to stop');
+            pause
         end
-
-        plot(t2,d2,t1,d1);
-        xlabel('timestamp');
-        legend('TXT converted from C3D','original TXT file');
-        title(varname);
-        disp('Hit ENTER to continue or CTRL-C to stop');
-        pause
     end
 
 end
