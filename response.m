@@ -2,12 +2,25 @@ function result = response(filename, options)
 % quantification of the perturbation response
 % 
 % Input:    filename........name of the mocap data file, must start with "Mocap"
+%           options.........struct which can have the following fields:
+%               filter....cutoff frequency (Hz) for smoothing of perturbation response (default: 1.0);    % use a 1 hz low pass filter for the Hotelling T-squared
+%               pvalue....threshold for detecing abnormal gait with the T-squared (default 0.001)
+%               markerset17...(logical) use the set of 17 markers, rather than all markers (default 0)
+%               testing.......(logical) produce extra output for testing (default 1)
+%
+%
 % Output:   result..........
-    global testing      % a logical flag that is true when testing
+
+    % use defaults for the options that were not specified
+    if nargin < 2 , options = []; end
+    if ~isfield(options,'filter') , options.filter = 1.0; end
+    if ~isfield(options,'pvalue') , options.pvalue = 0.001; end
+    if ~isfield(options,'testing') , options.testing = 0; end
+    if ~isfield(options,'markerset17') , options.markerset17 = 1; end
 
     % if no file is specified, we use one particular file for testing
     if nargin < 1
-        testing = 1;
+        options.testing = 1;
         shortname = 'Par3_PRE\Mocap0007.txt';
         computer = getenv('COMPUTERNAME');
         if strcmp(computer,'LRI-102855')
@@ -16,7 +29,7 @@ function result = response(filename, options)
             filename = ['C:\Users\hallo\OneDrive - Cleveland State University\Hala data\' shortname];    
         else
             fprintf('Your computername is: %s\n', computer);
-            fprintf('Please edit response.m by changing yourcomputername and yourdatafolder in lines 15-16\n');
+            fprintf('Customize response.m by adding two lines similar to lines 26-27\n');
             error('exiting now');
         end
         close all
@@ -24,15 +37,9 @@ function result = response(filename, options)
             delete('tmp.ps');
         end
     else
-        testing = 0;
+        options.testing = 0;
     end
-    
-    % if no options are specified, set some defaults
-    if nargin < 2
-        options.filter = 1.0;    % use a 1 hz low pass filter for the Hotelling T-squared
-        options.pvalue = 0.001;  % threshold for detecing abnormal gait with the T-squared
-    end
-    
+        
     % import the data
     mocapdata = importdata(filename);
     mocapdata = cleanup(mocapdata);   % interpolate missing markers, and insert NaN for large gaps
@@ -66,13 +73,13 @@ function result = response(filename, options)
     % the gaitdeviation function also estimates missing mocapdata
     if Lhs(PLhs) > Rhs(PRhs)    % which side was the last heelstrike before perturbation?
         fprintf('Left foot was in stance phase during perturbation\n');
-        [t1,t2,mocapdata] = gaitdeviation(mocapdata, Lhs, perturbtime, options);
+        result = gaitdeviation(mocapdata, Lhs, perturbtime, options);
     else
         fprintf('Right foot was in stance phase during perturbation\n');
-        [t1,t2,mocapdata] = gaitdeviation(mocapdata, Rhs, perturbtime, options);
+        result = gaitdeviation(mocapdata, Rhs, perturbtime, options);
     end
     
-    if (testing)
+    if (options.testing)
         % change backslashes and underscores, they mess up the plot labels
         % because they are Latex comments
         shortname = strrep(shortname,'\','/');
@@ -106,12 +113,7 @@ function result = response(filename, options)
         avcycles(mocaptimes, Sacrum(:,2), Rhs, PRhs, perturbtime, [shortname 'SACRUM Y(up)']);
         avcycles(mocaptimes, Sacrum(:,3), Rhs, PRhs, perturbtime, [shortname 'SACRUM Z(posterior)']);
     end
-    
-    % store result of the calculations in the result structure
-    result.t1 = t1;
-    result.t2 = t2;
-    result.mocapdata = mocapdata;
-    
+        
 end
 %========================================================
 function [avtime, avvar, sdvar] = avcycles(times, var, hs, phs, ptime, titletext)
@@ -267,18 +269,28 @@ function [L_hs, R_hs] = heelstrikes(data)
 
 end
 %=========================================================================================
-function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime, options)   
+function result = gaitdeviation(data, hs, perturbtime, options)   
 % calculate gait deviation timing (t1,t2) using Mahalanobis Distance
 % and also estimate missing data
-    global testing
     
     newdata = data;
     nsamples = size(data.data,1);
     t = data.data(:,1) - data.data(1,1);
     tperturb = perturbtime - data.data(1,1); % perturbation time relative to start of trial
 
-    % find the columns with marker data and remove those with too many NaNs
-    columns = find(contains(data.colheaders,'.Pos'))';
+    % find the columns with marker data
+    if options.markerset17
+        % use data from 17 defined markers
+        markers = {'RASIS','LASIS','RPSIS','LPSIS', 'SACR', ...
+                   'RGTRO','RLEK','RLM','RHEE','RMT5','RTOE', ...
+                   'LGTRO','LLEK','LLM','LHEE','LMT5','LTOE'};
+    else
+        % use all marker data, which is recognized by '.Pos' in the label
+        markers = {'.Pos'};
+    end
+    columns = find(contains(data.colheaders,markers))';
+    
+    % remove those with too many NaNs
     remove = [];
     for i=1:numel(columns)
         perc_missing = 100*sum(isnan(data.data(:,columns(i)))) / nsamples;
@@ -299,10 +311,10 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime, options)
     % estimate the covariance matrix using frames from gait cycles before the
     % perturbation, and those after the perturbation
     disp('Estimating mean and covariance...');
+    disp('  (takes about 6 minutes when using the full marker set)');
     i1 = find(t(hs) < tperturb,    1, 'last');  % last heelstrike before perturbation
     i2 = find(t(hs) > tperturb+10, 1, 'first'); % first heelstrike ten seconds after perturbation
     normalframes = [hs(1):hs(i1) hs(i2):hs(end)];
-    normalcycles = [hs(1:i1-1) hs(2:i1) ; hs(i2:end-1) hs(i2+1:end)];
     [mu,C] = ecmnmle(data.data(normalframes,columns));
     Cinv = inv(C);
    
@@ -363,22 +375,28 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime, options)
     % gait deviation measure is the duration of the period when p<threshold
     threshold = options.pvalue;
     d = [0 ; diff(p<threshold)];  % diff detects when p went across the threshold
-    rt1 = tnew(find(d==1  & tnew>tperturb,1,'first'));  % first time after the perturbation that p went below threshold
-    rt2 = tnew(find(d==-1 & tnew>tperturb,1,'first'));  % first time after the perturbation that p went above threshold again
+    it1 = find(d==1  & tnew>(tperturb-1),1,'first');  % first time after the perturbation that p went below threshold
+    it2 = find(d==-1 & tnew>tperturb,1,'first');  % first time after the perturbation that p went above threshold again
+    rt1 = tnew(it1);
+    rt2 = tnew(it2);
     t1 = rt1 - tperturb;
     t2 = rt2 - tperturb;
-    % if t1 > t2, this means that the gait was already abnormal when the
-    % perturbation happened, so don't use it
-    if (t1>t2)
-        t1 = NaN;
-    end
-    fprintf('Start    of perturbation recovery: %.3f s. after perturbation\n',t1);
-    fprintf('End      of perturbation recovery: %.3f s. after perturbation\n',t2);
-    fprintf('Duration of perturbation recovery: %.3f s.\n',t2-t1);
+    fprintf('Start (t1) of perturbation response:    %.3f s. after perturbation\n',t1);
+    fprintf('End (t2) of perturbation response:      %.3f s. after perturbation\n',t2);
+    T2max = max(T2f(it1:it2));
+    pmin  = min(p(it1:it2));
+    fprintf('Magnitude (T2max) of response:          %.3f\n',T2max);
+    fprintf('Minimum p value (pmin) during response: %.3e\n',pmin);
+    
+    % create the result structure
+    result.t1 = t1;
+    result.t2 = t2;
+    result.mocapdata = newdata;
+    result.T2max = T2max;
     
     % make a figure to illustrate what was calculated
     % (only when testing)
-    if (testing)
+    if (options.testing)
         xlim = [tperturb-2 tperturb+10]; % the time range we want to plot
         figure;
         subplot(2,1,1);
@@ -415,3 +433,4 @@ function [t1,t2,newdata] = gaitdeviation(data, hs, perturbtime, options)
         print('-dpsc','-append','-bestfit','tmp.ps');
     end
 end
+%========================================================
