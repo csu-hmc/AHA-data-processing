@@ -1,7 +1,12 @@
-function [SL_L, SL_R, ST_L, ST_R] = step_length(data, detail)
-	
+function result = step_analysis(data, detail)
+    % analysis of step time and step length
+    % data should be a data structure from a mocap file, from getdata.m
+    % use detail=1 to show and pause the results
+
+	close all   % remove all figures from the screen
+    
 	% select frames during 20 seconds of normal walking, before the perturbation
-	% (NOTE: we could add additional frames, if we know when the perturbation happened)
+	% (NOTE: we could add additional frames after the perturbation, if we know when the perturbation happened)
 	st = 1000; % starting data frame
 	ed = 3000; % ending data frame
 	
@@ -108,9 +113,24 @@ function [SL_L, SL_R, ST_L, ST_R] = step_length(data, detail)
     ST_L = rmoutliers(ST_L);
     ST_R = rmoutliers(ST_R);
     
+    % calculate mean and SD for all variables, and store in result
+    result.ST_left_mean  = mean(ST_L);
+    result.ST_left_SD    = std(ST_L);
+    result.ST_right_mean = mean(ST_R);
+    result.ST_right_SD   = std(ST_R);
+    result.SL_left_mean  = mean(SL_L);
+    result.SL_left_SD    = std(SL_L);
+    result.SL_right_mean = mean(SL_R);
+    result.SL_right_SD   = std(SL_R);
+    
     if (detail)
-    	disp('Click Continue to Continue')
-		keyboard
+        fprintf('Left  step time:   %8.3f %s %8.3f s.\n',result.ST_left_mean,char(177),result.ST_left_SD);
+        fprintf('Right step time:   %8.3f %s %8.3f s.\n',result.ST_right_mean,char(177),result.ST_right_SD);
+        fprintf('Left  step length: %8.3f %s %8.3f s.\n',result.SL_left_mean,char(177),result.SL_left_SD);
+        fprintf('Right step length: %8.3f %s %8.3f s.\n',result.SL_right_mean,char(177),result.SL_right_SD);
+        disp('Check Figure 1 for problems');
+    	disp('Hit ENTER to Continue')
+		pause
     end
 end
 %==================================================

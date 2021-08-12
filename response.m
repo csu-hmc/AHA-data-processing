@@ -1,18 +1,22 @@
-function result = response(filename, options)
+function result = response(mocapdata, treadmilldata, options)
 % quantification of the perturbation response
 % 
-% Input:    filename........name of the mocap data file, must start with "Mocap"
+% Input:    mocapdata.......mocap data, from getdata() function
+%           treadmilldata...treadmill data, from getdata() function
 %           options.........struct which can have the following fields:
 %               filter....cutoff frequency (Hz) for smoothing of perturbation response (default: 1.0);    % use a 1 hz low pass filter for the Hotelling T-squared
 %               pvalue....threshold for detecing abnormal gait with the T-squared (default 0.001)
 %               markerset17...(logical) use the set of 17 markers, rather than all markers (default 0)
 %               testing.......(logical) produce extra output for testing (default 1)
 %
-%
-% Output:   result..........
+% Output:   result..........struct with the following fields
+%               t1............time when the perturbation response starts (relative to perturbation)
+%               t2............time when the perturbation response ends
+%               T2max.........maximum of the Hotelling T-squared after perturbation
+%               mocapdata.....mocap data after PCA reconstruction (no missing markers)
 
     % use defaults for the options that were not specified
-    if nargin < 2 , options = []; end
+    if nargin < 3 , options = []; end
     if ~isfield(options,'filter') , options.filter = 1.0; end
     if ~isfield(options,'pvalue') , options.pvalue = 0.001; end
     if ~isfield(options,'testing') , options.testing = 0; end
@@ -21,37 +25,15 @@ function result = response(filename, options)
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         options.testing = 1;
-        shortname = 'Par3_PRE\Mocap0007.txt';
-        computer = getenv('COMPUTERNAME');
-        if strcmp(computer,'LRI-102855')
-            filename = ['C:\Users\Ton\Cleveland State University\Hala E Osman - Hala data\' shortname];    
-        elseif strcmp(computer,'DESKTOP-0HN0T6U')
-            filename = ['C:\Users\hallo\OneDrive - Cleveland State University\Hala data\' shortname];    
-        else
-            fprintf('Your computername is: %s\n', computer);
-            fprintf('Customize response.m by adding two lines similar to lines 26-27\n');
-            error('exiting now');
-        end
-        close all
-        if exist('tmp.ps')
-            delete('tmp.ps');
-        end
+        [mocapdata,treadmilldata] = getdata('Par3_PRE\Mocap0007.txt');
+        close all;  % remove all Figures from the screen
     else
         options.testing = 0;
     end
-        
-    % import the data
-    mocapdata = importdata(filename);
-    mocapdata = cleanup(mocapdata);   % interpolate missing markers, and insert NaN for large gaps
     
-    % make new time stamps (we know that Cortex sends all frames at exactly
-    % 100 Hz
-    mocapdata.data(:,1) = mocapdata.data(1,1) + 0.01 * (0:(size(mocapdata.data,1)-1));
-    
-    treadmillfile = strrep(filename,'Mocap','Treadmill');
-    treadmilldata = importdata(treadmillfile);
-    
-    % resample the treadmill data at the same time stamps as the mocap data
+    fprintf('Perturbation response analysis for %s\n', mocapdata.name);
+            
+    % extract column 1 (time stamps) from both files
     treadmilltimes = treadmilldata.data(:,1);  % column 1 of treadmill file
     mocaptimes     = mocapdata.data(:,1);      % column 1 of mocap file
     
@@ -61,9 +43,9 @@ function result = response(filename, options)
     acc = diff(speed)./diff(treadmilltimes);
     perturbtime = treadmilltimes(find(acc > 5.0, 1));  % find first time when acceleration exceeded 5 m/s2
     fprintf('Perturbation happened at %8.3f seconds into the trial\n', perturbtime-mocaptimes(1));  
-    [~,perturbframe] = min(abs(mocaptimes-perturbtime));
+    [~,perturbframe] = min(abs(mocaptimes-perturbtime));  % find the closest mocap frame
     
-    % find the heelstrikes using vertical GRF
+    % find the heelstrikes using vertical GRF, and the last heelstrikes before the perturbation
     [Lhs, Rhs] = heelstrikes(mocapdata);
     PLhs = find(Lhs < perturbframe, 1, 'last' );
     PRhs = find(Rhs < perturbframe, 1, 'last' );
@@ -79,12 +61,21 @@ function result = response(filename, options)
         result = gaitdeviation(mocapdata, Rhs, perturbtime, options);
     end
     
-    if (options.testing)
-        % change backslashes and underscores, they mess up the plot labels
-        % because they are Latex comments
-        shortname = strrep(shortname,'\','/');
-        shortname = strrep(shortname,'_','\_');
-     
+    if options.testing
+        % allow user to inspect the result, before proceeding
+        disp('Please check Figure 1 for bad heelstrike detections near the perturbation time');
+        disp('Please check Figure 2 for correct detection of the perturbation response');
+        disp('Hit ENTER to continue');
+        pause
+    end
+    
+    % We currently don't do anything with the rest of the analysis, but the plots may
+    % be useful to illustrate that the marker-based T2 is much better for seeing perturbation
+    % responses than the single variables.
+    % To turn on the code, use "if (1)" in the following line.
+    if (0) 
+        name = mocapdata.latexname;
+        
         % calculate some descriptive variables
         Rkneeangle = 180/pi * kneeangles(mocapdata, 'R');
         Lkneeangle = 180/pi * kneeangles(mocapdata, 'L');
@@ -97,23 +88,23 @@ function result = response(filename, options)
 
         % plot average and SD of normal gait, superimpose the gait just
         % before and after the perturbation
-        avcycles(mocaptimes, Rkneeangle, Rhs, PRhs, perturbtime, [shortname 'RIGHT KNEE ANGLE']);
-        avcycles(mocaptimes, Lkneeangle, Rhs, PRhs, perturbtime, [shortname 'LEFT KNEE ANGLE']);
-        avcycles(mocaptimes, Rhipangle, Rhs, PRhs, perturbtime, [shortname 'RIGHT HIP ANGLE']);
-        avcycles(mocaptimes, Lhipangle, Rhs, PRhs, perturbtime, [shortname 'LEFT HIP ANGLE']);
-        avcycles(mocaptimes, -Rheelpos(:,3), Rhs, PRhs, perturbtime, [shortname 'R anterior foot pos']);
-        avcycles(mocaptimes, -Lheelpos(:,3), Rhs, PRhs, perturbtime, [shortname 'L anterior foot pos']);
-        avcycles(mocaptimes, Rheelpos(:,1), Rhs, PRhs, perturbtime, [shortname 'R lateral foot pos']);
-        avcycles(mocaptimes, -Lheelpos(:,1), Rhs, PRhs, perturbtime, [shortname 'L lateral foot pos']);
+        avcycles(mocaptimes, Rkneeangle, Rhs, PRhs, perturbtime, [name 'RIGHT KNEE ANGLE']);
+        avcycles(mocaptimes, Lkneeangle, Rhs, PRhs, perturbtime, [name 'LEFT KNEE ANGLE']);
+        avcycles(mocaptimes, Rhipangle, Rhs, PRhs, perturbtime, [name 'RIGHT HIP ANGLE']);
+        avcycles(mocaptimes, Lhipangle, Rhs, PRhs, perturbtime, [name 'LEFT HIP ANGLE']);
+        avcycles(mocaptimes, -Rheelpos(:,3), Rhs, PRhs, perturbtime, [name 'R anterior foot pos']);
+        avcycles(mocaptimes, -Lheelpos(:,3), Rhs, PRhs, perturbtime, [name 'L anterior foot pos']);
+        avcycles(mocaptimes, Rheelpos(:,1), Rhs, PRhs, perturbtime, [name 'R lateral foot pos']);
+        avcycles(mocaptimes, -Lheelpos(:,1), Rhs, PRhs, perturbtime, [name 'L lateral foot pos']);
 
         % also take a look at sacrum XYZ trajectories
         % (we can also use Center of Mass, as defined in the MOS analysis)
         Sacrum = marker(mocapdata, 'SACR');
-        avcycles(mocaptimes, Sacrum(:,1), Rhs, PRhs, perturbtime, [shortname 'SACRUM X(right)']);
-        avcycles(mocaptimes, Sacrum(:,2), Rhs, PRhs, perturbtime, [shortname 'SACRUM Y(up)']);
-        avcycles(mocaptimes, Sacrum(:,3), Rhs, PRhs, perturbtime, [shortname 'SACRUM Z(posterior)']);
+        avcycles(mocaptimes, Sacrum(:,1), Rhs, PRhs, perturbtime, [name 'SACRUM X(right)']);
+        avcycles(mocaptimes, Sacrum(:,2), Rhs, PRhs, perturbtime, [name 'SACRUM Y(up)']);
+        avcycles(mocaptimes, Sacrum(:,3), Rhs, PRhs, perturbtime, [name 'SACRUM Z(posterior)']);
     end
-        
+    disp('Analysis of perturbation response (response.m) completed.')  
 end
 %========================================================
 function [avtime, avvar, sdvar] = avcycles(times, var, hs, phs, ptime, titletext)
@@ -310,12 +301,14 @@ function result = gaitdeviation(data, hs, perturbtime, options)
 
     % estimate the covariance matrix using frames from gait cycles before the
     % perturbation, and those after the perturbation
-    disp('Estimating mean and covariance...');
-    disp('  (takes about 6 minutes when using the full marker set)');
+    disp('Estimating mean and covariance of marker data...');
+    disp('  (6 minutes for full marker set, 30 seconds for 17 markers)');
     i1 = find(t(hs) < tperturb,    1, 'last');  % last heelstrike before perturbation
     i2 = find(t(hs) > tperturb+10, 1, 'first'); % first heelstrike ten seconds after perturbation
     normalframes = [hs(1):hs(i1) hs(i2):hs(end)];
+    tic
     [mu,C] = ecmnmle(data.data(normalframes,columns));
+    toc
     Cinv = inv(C);
    
     % impute missing data using idea from Rasmussen 2020
@@ -381,12 +374,8 @@ function result = gaitdeviation(data, hs, perturbtime, options)
     rt2 = tnew(it2);
     t1 = rt1 - tperturb;
     t2 = rt2 - tperturb;
-    fprintf('Start (t1) of perturbation response:    %.3f s. after perturbation\n',t1);
-    fprintf('End (t2) of perturbation response:      %.3f s. after perturbation\n',t2);
     T2max = max(T2f(it1:it2));
     pmin  = min(p(it1:it2));
-    fprintf('Magnitude (T2max) of response:          %.3f\n',T2max);
-    fprintf('Minimum p value (pmin) during response: %.3e\n',pmin);
     
     % create the result structure
     result.t1 = t1;
@@ -394,14 +383,18 @@ function result = gaitdeviation(data, hs, perturbtime, options)
     result.mocapdata = newdata;
     result.T2max = T2max;
     
-    % make a figure to illustrate what was calculated
+    % write results on screen, make a figure to illustrate what was calculated
     % (only when testing)
     if (options.testing)
+        fprintf('Start (t1) of perturbation response:    %.3f s. after perturbation\n',t1);
+        fprintf('End (t2) of perturbation response:      %.3f s. after perturbation\n',t2);
+        fprintf('Magnitude (T2max) of response:          %.3f\n',T2max);
+        fprintf('Minimum p value (pmin) during response: %.3e\n',pmin);
         xlim = [tperturb-2 tperturb+10]; % the time range we want to plot
         figure;
         subplot(2,1,1);
         plot(tnew,[T2new T2f]);
-        title('Hotelling T^2 statistic');
+        title([data.latexname ': Hotelling T^2']);
         xlabel('time (s)');
         legend('T^2 unfiltered',num2str(Fc,'%.1f Hz double 2nd order'));
         set(gca,'XLim',xlim);
@@ -430,7 +423,7 @@ function result = gaitdeviation(data, hs, perturbtime, options)
         annotation('textarrow',xrel2,[yrel2 yrel2],'String', num2str(t2,'t2 = %.3f s.'));
         
         % append to the tmp.ps file
-        print('-dpsc','-append','-bestfit','tmp.ps');
+        % print('-dpsc','-append','-bestfit','tmp.ps');
     end
 end
 %========================================================

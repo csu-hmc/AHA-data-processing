@@ -35,11 +35,54 @@ This has only been tested on trial 1 in the Participant 4, Post-test folder.  It
 * If the C3D recording started *before* the Mocap file, there is code to handle that, but this has not been tested because it did not occur in the test file.
 * If the original TXT file does not have labeled data for all 47 markers, the conversion should still work but this has not been tested yet either.
 
-## Analysis of normal gait
-(describe the code and the results that are produced)
+## Methods of analysis
 
-## Analysis of perturbation response
-(describe the code and the results that are produced)
+There are three tools: response.m, step_analysis.m, and mos.m, for respectively, the response to perturbations, the step time and step length, and the margin of stability.
 
-## Script for automated data processing of all trials
-(describe the code and how the results are stored/presented)
+Each of these three codes is written so they can be easily tested on one trial, by executing them without inputs. You can do this by clicking the "Play" (right triangle) button in the Editor tab. This setup is not yet completed for step_analysis.m and mos.m.
+
+For processing a series of trials, see the "Workflow" section below.
+
+### Response to perturbation
+
+The code in response.m determines the magnitude (T2max) and the duration (t2) of the perturbation response, using the Hotelling T-squared statistic.  (more details and references needed, we may write a paper about this too)
+
+### Step analysis
+
+The code in step_analysis.m determines the right and left step times and step lengths during seconds 10-30 of the trial. Average and standard deviation are calculated of all four variables.
+
+### Margin of stability
+
+The code in mos.m calculates the margin of stability according to the paper by Patricia Young (REFERENCE NEEDED).  (more details needed)  The code is not working yet.
+
+## Workflow for analysis of the trials
+
+This describes the workflow to get all data processed.  It is fully automated, with an option to pause and show details for each trial. This option should be turned on until we know that all trials can be processed automatically.
+
+### Data folders
+The trials should be organized into folders, one folder for each test session with up to 15 trials. The folder should contain the mocap files and treadmill files. The only naming requirement is that the filenames should contain a unique trial number that is used to match a mocap file to a treadmill file. 
+
+To set up the processing, create a text file named 0FileList.txt.  In this file, type a list of the mocap files that must be processed.  I have created an example in the Par7_PRE folder.  This allows you to customize the set of files, choose less than 15 trials, choose edited mocap files, etc.
+
+When problems occur during processing, you can still edit the C3D files and make new mocap files using the C3D conversion tools described in the previous section.
+
+### Main program
+The program main.m can be set up to process all data, or a subset of the data. Edit the program to select the subject(s) and condition(s) to process. 
+
+This allows you to skip the processing of sessions that were already done.
+
+In this program you can also set the "detail" option.
+
+### Processdata function
+The code in processdata.m is called from the main program. It processes all trials from one test session. 
+
+Here you can find settings specific to the analysis, such as the markerset for the response analysis.  The code should be self-explanatory.
+
+The code uses the three analysis tools to generate a number of values from each trial.  These variables are initially stored in a Matlab table, which is then written to an Excel file.  The Excel file is placed in the same session folder where the trials are.  The name of the Excel fils is the same as the folder name.  For instance, after running the processdata function on the Par7_PRE folder, the Par7_PRE folder will contain a file Par7_PRE.xlsx.
+
+### Graphics
+Various graphs are generated when "detail" is turned on. The user will be prompted to inspect them for problems, and then hit ENTER to continue.  Some of these graphs may be useful as illustrations in manuscripts or dissertation. You should be able to do Edit->Copy options and Edit-?Copy Figure to export them.  If not, please report the issue.
+
+For each folder, the step analysis results are plotted with trial number on the horizontal axis.  This may show interesting trends, and could be useful to detect fatigue.  This file is also exported as step_analysis.png.
+
+If other graphs, or graphs exported to files, are useful, please ask.
