@@ -4,6 +4,7 @@ function result = step_analysis(data, detail)
     % use detail=1 to show and pause the results
 
 	close all   % remove all figures from the screen
+    fprintf('Step analysis for %s\n', data.name);
     
 	% select frames during 20 seconds of normal walking, before the perturbation
 	% (NOTE: we could add additional frames after the perturbation, if we know when the perturbation happened)
@@ -128,10 +129,11 @@ function result = step_analysis(data, detail)
         fprintf('Right step time:   %8.3f %s %8.3f s.\n',result.ST_right_mean,char(177),result.ST_right_SD);
         fprintf('Left  step length: %8.3f %s %8.3f s.\n',result.SL_left_mean,char(177),result.SL_left_SD);
         fprintf('Right step length: %8.3f %s %8.3f s.\n',result.SL_right_mean,char(177),result.SL_right_SD);
-        disp('Check Figure 1 for problems');
+        disp('Check Figure 1, and the results printed above, for problems');
     	disp('Hit ENTER to Continue')
 		pause
     end
+    disp('Step analysis (step_analysis.m) completed.');
 end
 %==================================================
 function fraction = missing(x)

@@ -6,7 +6,7 @@ function main
     % participants = [2 3 4];       % list of participant numbers, also used to construct folder names
     participants = [7];       % example, if you wanted to process just one participant
     conditions = {'_PRE' '_POST'};  % conditions to be analyzed, also used to construct folder names
-    details = 1;                    % use 1 for testing, 0 for fully automated processing
+    details = 0;                    % use 1 for testing, 0 for fully automated processing
 
     % loop through the participant folders and use processdata.m to do the work
     for i = 1:numel(participants)

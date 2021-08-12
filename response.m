@@ -74,6 +74,7 @@ function result = response(mocapdata, treadmilldata, options)
     % responses than the single variables.
     % To turn on the code, use "if (1)" in the following line.
     if (0) 
+        mocapdata = result.mocapdata;  % use the PCA-filed mocap data
         name = mocapdata.latexname;
         
         % calculate some descriptive variables
@@ -302,7 +303,7 @@ function result = gaitdeviation(data, hs, perturbtime, options)
     % estimate the covariance matrix using frames from gait cycles before the
     % perturbation, and those after the perturbation
     disp('Estimating mean and covariance of marker data...');
-    disp('  (6 minutes for full marker set, 30 seconds for 17 markers)');
+    disp('  (can take up to 6 min for full marker set, 30 seconds for 17 markers)');
     i1 = find(t(hs) < tperturb,    1, 'last');  % last heelstrike before perturbation
     i2 = find(t(hs) > tperturb+10, 1, 'first'); % first heelstrike ten seconds after perturbation
     normalframes = [hs(1):hs(i1) hs(i2):hs(end)];

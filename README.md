@@ -59,6 +59,8 @@ The code in mos.m calculates the margin of stability according to the paper by P
 
 This describes the workflow to get all data processed.  It is fully automated, with an option to pause and show details for each trial. This option should be turned on until we know that all trials can be processed automatically.
 
+To process all data, type "main" in the command window, or load main.m in the Editor and click on the play (green triangle) button.
+
 ### Data folders
 The trials should be organized into folders, one folder for each test session with up to 15 trials. The folder should contain the mocap files and treadmill files. The only naming requirement is that the filenames should contain a unique trial number that is used to match a mocap file to a treadmill file. 
 
@@ -78,11 +80,13 @@ The code in processdata.m is called from the main program. It processes all tria
 
 Here you can find settings specific to the analysis, such as the markerset for the response analysis.  The code should be self-explanatory.
 
-The code uses the three analysis tools to generate a number of values from each trial.  These variables are initially stored in a Matlab table, which is then written to an Excel file.  The Excel file is placed in the same session folder where the trials are.  The name of the Excel fils is the same as the folder name.  For instance, after running the processdata function on the Par7_PRE folder, the Par7_PRE folder will contain a file Par7_PRE.xlsx.
+The code uses the three analysis tools to generate a number of values from each trial.  These variables are initially stored in a Matlab table, which is then written to an Excel file.  The Excel file is placed in the same session folder where the trials are.  The name of the Excel fils is the same as the folder name.  For instance, after running the processdata function on the Par7_PRE folder, the Par7_PRE folder will contain a file 0Par7_PRE.xlsx.  The file name starts with zero so it is easy to find in the folder and not hidden between the data files.
 
 ### Graphics
 Various graphs are generated when "detail" is turned on. The user will be prompted to inspect them for problems, and then hit ENTER to continue.  Some of these graphs may be useful as illustrations in manuscripts or dissertation. You should be able to do Edit->Copy options and Edit-?Copy Figure to export them.  If not, please report the issue.
 
-For each folder, the step analysis results are plotted with trial number on the horizontal axis.  This may show interesting trends, and could be useful to detect fatigue.  This file is also exported as step_analysis.png.
+Alternatively, we could have all of these plots written to a PDF file, so you don't need to pause and continue.  The plots can then be inspected later. Let me know if that is a good idea.
+
+For each folder, the step analysis results are plotted with trial number on the horizontal axis.  This may show interesting trends, and could be useful to detect fatigue.  This file is also exported as 0step_analysis.png.
 
 If other graphs, or graphs exported to files, are useful, please ask.
