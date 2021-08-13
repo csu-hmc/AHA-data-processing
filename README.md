@@ -53,7 +53,11 @@ The code in step_analysis.m determines the right and left step times and step le
 
 ### Margin of stability
 
-The code in mos.m calculates the margin of stability according to the paper by Patricia Young (REFERENCE NEEDED).  (more details needed)  The code is not working yet.
+The code in mos.m calculates the margin of stability based on [1].  
+
+(here describe how our analysis is different from that paper)
+
+The code is not working yet.
 
 ## Workflow for analysis of the trials
 
@@ -90,3 +94,8 @@ Alternatively, we could have all of these plots written to a PDF file, so you do
 For each folder, the step analysis results are plotted with trial number on the horizontal axis.  This may show interesting trends, and could be useful to detect fatigue.  This file is also exported as 0step_analysis.png.
 
 If other graphs, or graphs exported to files, are useful, please ask.
+
+## References
+
+[1] McAndrew Young P, Wilken JM, Dingwell JB (2012) Dynamic margins of stability during human walking in destabilizing environments. Journal of Biomechanics 45: 1053–1059.
+

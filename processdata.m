@@ -16,6 +16,12 @@ function processdata(folder, detail)
     % delete any files that may have been created previously
     if exist(excelfile), delete(excelfile); end
     if exist(tmppsfile), delete(tmppsfile); end
+    if exist(excelfile) 
+        error('%s is open in another application. Close it and retry.', excelfile);
+    end
+    if exist(tmppsfile) 
+        error('%s is open in another application. Close it and retry.', tmppsfile);
+    end
     
     % turn detail off if not specified
     if nargin < 2
@@ -30,7 +36,7 @@ function processdata(folder, detail)
         fprintf('   ...%s\n', name);
         TrialNum(trial_num,1) = trial_num;
         FileName{trial_num,1} = name;
-        [mocapdata,treadmilldata] = getdata(name);
+        [mocapdata,treadmilldata] = getdata(name, detail);
         
         % do the analysis of the perturbation response and store result
         options.testing = detail;

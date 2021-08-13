@@ -2,60 +2,32 @@ function result = step_analysis(data, detail)
     % analysis of step time and step length
     % data should be a data structure from a mocap file, from getdata.m
     % use detail=1 to show and pause the results
+        
+    % if no input is specified, we use one particular file for testing
+    if nargin < 1
+        detail = 1;
+        data = getdata('Par3_PRE\Mocap0007.txt', 1);  % we only need the mocap data
+    end
 
-	close all   % remove all figures from the screen
     fprintf('Step analysis for %s\n', data.name);
     
-	% select frames during 20 seconds of normal walking, before the perturbation
+    % find the heelstrikes and only keep those that occurred between 10 and 30 seconds
 	% (NOTE: we could add additional frames after the perturbation, if we know when the perturbation happened)
-	st = 1000; % starting data frame
-	ed = 3000; % ending data frame
-	
-% PART 1: step times, this only requires force plate data
+	L_hs = data.Lhs;
+    R_hs = data.Rhs;
+    st = 10; % starting time
+	ed = 30; % ending time
+    time = data.data(:,1)-data.data(1,1);  % time relative to start of file
+    L_hs = L_hs( (time(L_hs) >= st) & (time(L_hs) <= ed) );
+    R_hs = R_hs( (time(R_hs) >= st) & (time(R_hs) <= ed) );
     
-    % set the threshold (Newtons) for the detection of heelstrike
-    threshold = 50;         
-	
-	% extract the vertical GRF from the data
-	col_left_GRF  = findcolumn(data, 'FP1.ForY');
-	col_right_GRF = findcolumn(data, 'FP2.ForY');
-	time       = data.data(st:ed, 1);
-	right_GRF  = data.data(st:ed, col_right_GRF);
-	left_GRF   = data.data(st:ed, col_left_GRF);
-    
-    if (detail)
-		% plot GRF for checking
-		figure(1)
-		subplot(2,1,1)
-		plot(time, [left_GRF right_GRF]);
-		legend('Left', 'Right')
-		ylabel('Ground Reaction Force (N)')
-    end
-    
-   	% filter the GRF to make sure that no rapid change at around 100 N.
-	% Heel Z is also filtered to make step length a little more
-	% reliable
-	cutoff_freq = 6;
-	[b, a] = butter(2, (cutoff_freq/(100/2)));
-	right_GRF = filtfilt(b, a, right_GRF);
-	left_GRF = filtfilt(b, a, left_GRF);
-    
-    sign_L = left_GRF > threshold;  % sign is 1 when above threshold, zero otherwise
-    sign_R = right_GRF > threshold;
-
-    d_signL = diff(sign_L);         % determine the changes in sign
-    d_signR = diff(sign_R);
-
-    L_hs = find(d_signL == 1);      % heelstrike is when sign changes from 0 to 1
-    R_hs = find(d_signR == 1);
-
-    % force the left and right legs have the same number of steps, cut off by
+    % force the left and right legs to have the same number of steps, cut off by
     % the end steps
     num_step_min = min(length(L_hs), length(R_hs));
     L_hs = L_hs(1:num_step_min);
     R_hs = R_hs(1:num_step_min);    % extract the heel Z trajectory
     
-    % calculate step times
+    % calculate step times and step lengths
     % definitions: Wall et al., Clinical Biomechanics 1987; 2: 119-125
     % NOTE: I changed the variable names, ST_R is the step time when the
     % right leg is stepping (and left is in stance phase)
@@ -67,35 +39,25 @@ function result = step_analysis(data, detail)
         ST_L = time(L_hs) - time(R_hs);
     end
     
-% PART 2: determine step lengths, this requires marker data
-    
-	col_LHEEz     = findcolumn(data, 'LHEE.PosZ');
-    if isempty(col_LHEEz)
-        % markers were probably not labeled so we can't do step length
-        disp('step_time: markers not labeled so only doing step time, not step length');
-    end
-    col_RHEEz     = findcolumn(data, 'RHEE.PosZ');
-	right_HEEL  = data.data(st:ed, col_RHEEz);
-	left_HEEL  = data.data(st:ed, col_LHEEz);
+    % step lengths, this requires marker data   
+	left_HEEL  = getcolumn(data, 'LHEE.PosZ');
+    right_HEEL = getcolumn(data, 'RHEE.PosZ');
 
 	% Heel Z is filtered to make step length a little more reliable
     % this only works if there are no remaining gaps in the data
+    cutoff_freq = 6;
+	[b, a] = butter(2, (cutoff_freq/(100/2)));
     if isempty(find(isnan(right_HEEL)))
         right_HEEL = filtfilt(b, a, right_HEEL);
+    else
+        disp('right_HEEL not filtered because it has gaps.');
     end
     if isempty(find(isnan(left_HEEL)))
         left_HEEL  = filtfilt(b, a, left_HEEL); 
+    else
+        disp('left_HEEL not filtered because it has gaps.');
     end
     
-	if (detail)
-		% plot HEEL Z for checking
-		figure(1)
-		subplot(2,1,2)
-		plot(time, [left_HEEL right_HEEL]);
-		xlabel('Time (s)')
-		ylabel('Heel Marker Z (m)')
-	end
-
     % calculate step lengths, but only if less than 50% of each heel is missing
     % remember that negative Z is forward (towards the screen)
     % NOTE: I changed the variable names based on the definitions by Wall.
@@ -109,10 +71,10 @@ function result = step_analysis(data, detail)
     end
   
     % remove the outliers
-    SL_L = rmoutliers(SL_L);
-    SL_R = rmoutliers(SL_R);
-    ST_L = rmoutliers(ST_L);
-    ST_R = rmoutliers(ST_R);
+%     SL_L = rmoutliers(SL_L);
+%     SL_R = rmoutliers(SL_R);
+%     ST_L = rmoutliers(ST_L);
+%     ST_R = rmoutliers(ST_R);
     
     % calculate mean and SD for all variables, and store in result
     result.ST_left_mean  = mean(ST_L);
@@ -125,11 +87,24 @@ function result = step_analysis(data, detail)
     result.SL_right_SD   = std(SL_R);
     
     if (detail)
+		% plot the step times and step lengths
+        close all
+		figure(1)
+		subplot(2,1,1)
+		plot(ST_R);hold on; plot(ST_L);
+		ylabel('step time (s)')
+		subplot(2,1,2)
+		plot(SL_R);hold on; plot(SL_L);
+		xlabel('step number')
+		ylabel('step length (m)')
+        legend('Right','Left');
+
         fprintf('Left  step time:   %8.3f %s %8.3f s.\n',result.ST_left_mean,char(177),result.ST_left_SD);
         fprintf('Right step time:   %8.3f %s %8.3f s.\n',result.ST_right_mean,char(177),result.ST_right_SD);
         fprintf('Left  step length: %8.3f %s %8.3f s.\n',result.SL_left_mean,char(177),result.SL_left_SD);
         fprintf('Right step length: %8.3f %s %8.3f s.\n',result.SL_right_mean,char(177),result.SL_right_SD);
         disp('Check Figure 1, and the results printed above, for problems');
+        disp('(affected side should have lower step length, can even be negative if foot drags behind)');
     	disp('Hit ENTER to Continue')
 		pause
     end

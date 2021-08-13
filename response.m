@@ -21,14 +21,11 @@ function result = response(mocapdata, treadmilldata, options)
     if ~isfield(options,'pvalue') , options.pvalue = 0.001; end
     if ~isfield(options,'testing') , options.testing = 0; end
     if ~isfield(options,'markerset17') , options.markerset17 = 1; end
-
+    
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         options.testing = 1;
-        [mocapdata,treadmilldata] = getdata('Par3_PRE\Mocap0007.txt');
-        close all;  % remove all Figures from the screen
-    else
-        options.testing = 0;
+        [mocapdata,treadmilldata] = getdata('Par3_PRE\Mocap0007.txt', 1);
     end
     
     fprintf('Perturbation response analysis for %s\n', mocapdata.name);
@@ -38,15 +35,15 @@ function result = response(mocapdata, treadmilldata, options)
     mocaptimes     = mocapdata.data(:,1);      % column 1 of mocap file
     
     % find the frame and time when the perturbation happened
-	speedcol  = findcolumn(treadmilldata, 'Actual belt speed');
-    speed = treadmilldata.data(:,speedcol); 
+	speed = getcolumn(treadmilldata, 'Actual belt speed');
     acc = diff(speed)./diff(treadmilltimes);
     perturbtime = treadmilltimes(find(acc > 5.0, 1));  % find first time when acceleration exceeded 5 m/s2
     fprintf('Perturbation happened at %8.3f seconds into the trial\n', perturbtime-mocaptimes(1));  
     [~,perturbframe] = min(abs(mocaptimes-perturbtime));  % find the closest mocap frame
     
-    % find the heelstrikes using vertical GRF, and the last heelstrikes before the perturbation
-    [Lhs, Rhs] = heelstrikes(mocapdata);
+    % find the heelstrikes of both feet before the perturbation
+    Lhs = mocapdata.Lhs;
+    Rhs = mocapdata.Rhs;
     PLhs = find(Lhs < perturbframe, 1, 'last' );
     PRhs = find(Rhs < perturbframe, 1, 'last' );
     
@@ -63,8 +60,7 @@ function result = response(mocapdata, treadmilldata, options)
     
     if options.testing
         % allow user to inspect the result, before proceeding
-        disp('Please check Figure 1 for bad heelstrike detections near the perturbation time');
-        disp('Please check Figure 2 for correct detection of the perturbation response');
+        disp('Please check Figure 1 for correct detection of the perturbation response');
         disp('Hit ENTER to continue');
         pause
     end
@@ -100,7 +96,7 @@ function result = response(mocapdata, treadmilldata, options)
 
         % also take a look at sacrum XYZ trajectories
         % (we can also use Center of Mass, as defined in the MOS analysis)
-        Sacrum = marker(mocapdata, 'SACR');
+        Sacrum = getcolumn(mocapdata, 'SACR');
         avcycles(mocaptimes, Sacrum(:,1), Rhs, PRhs, perturbtime, [name 'SACRUM X(right)']);
         avcycles(mocaptimes, Sacrum(:,2), Rhs, PRhs, perturbtime, [name 'SACRUM Y(up)']);
         avcycles(mocaptimes, Sacrum(:,3), Rhs, PRhs, perturbtime, [name 'SACRUM Z(posterior)']);
@@ -170,9 +166,9 @@ function [avtime, avvar, sdvar] = avcycles(times, var, hs, phs, ptime, titletext
 end
 %=======================================================
 function [angles] = kneeangles(data, side)
-    Hip   = marker(data, [side 'GTRO']);
-    Knee  = marker(data, [side 'LEK']);
-    Ankle = marker(data, [side 'LM']);
+    Hip   = getcolumn(data, [side 'GTRO']);
+    Knee  = getcolumn(data, [side 'LEK']);
+    Ankle = getcolumn(data, [side 'LM']);
     
     % construct unit vectors from hip to knee and from knee to ankle
     thigh = Knee - Hip;
@@ -188,22 +184,15 @@ end
 %==========================================================
 function [pos] = footplacement(data, side)
     % calculate position of heel relative to sacrum
-    Heel   = marker(data, [side 'HEE']);
-    Sacrum  = marker(data, 'SACR');
+    Heel   = getcolumn(data, [side 'HEE']);
+    Sacrum  = getcolumn(data, 'SACR');
     pos = Heel - Sacrum;   
-end
-%======================================================
-function xyz = marker(data, name)
-% extract a 3D marker trajectory from data
-	colX  = findcolumn(data, [name '.PosX']);
-    % grab three successive columns from data.data
-    xyz = data.data(:,colX+(0:2));
 end
 %=======================================================
 function [angles] = hipangles(data, side)
-    Hip   = marker(data, [side 'GTRO']);
-    Knee  = marker(data, [side 'LEK']);
-    Shoulder = marker(data, [side 'SHO']);
+    Hip   = getcolumn(data, [side 'GTRO']);
+    Knee  = getcolumn(data, [side 'LEK']);
+    Shoulder = getcolumn(data, [side 'SHO']);
     
     % construct unit vectors from shoulder to hip and hip to knee
     trunk = Hip - Shoulder;
@@ -215,50 +204,6 @@ function [angles] = hipangles(data, side)
     % angle is inverse sine of (cross product divided by both vector norms)
     angles = asin(crossnorm ./ thighnorm ./ trunknorm);
     
-end
-%======================================================
-function [L_hs, R_hs] = heelstrikes(data)
-% find the left and right heelstrikes
-    
-    % extract the vertical GRF from the data
-	col_left_GRF  = findcolumn(data, 'FP1.ForY');
-	col_right_GRF = findcolumn(data, 'FP2.ForY');
-	time       = data.data(:, 1) - data.data(1,1);  % time from start of trial
-	right_GRF  = data.data(:, col_right_GRF);
-	left_GRF   = data.data(:, col_left_GRF);
-
-    % filter the GRF to make sure that no rapid change at around 100 N.
-	cutoff_freq = 6;
-	[b, a] = butter(2, (cutoff_freq/(100/2)));
-	right_GRF = filtfilt(b, a, right_GRF);
-	left_GRF = filtfilt(b, a, left_GRF);
-    
-    % find the times when GRF goes above the threshold
-    threshold = 50;   % newtons
-    sign_L = left_GRF > threshold;  % sign is 1 when above threshold, zero otherwise
-    sign_R = right_GRF > threshold;
-    d_signL = diff(sign_L);         % determine the changes in sign
-    d_signR = diff(sign_R);
-    L_hs = find(d_signL == 1);      % heelstrike is when sign changes from 0 to 1
-    R_hs = find(d_signR == 1);
-    
-    % remove any heelstrikes before 2 seconds (walking is not quite
-    % periodic yet)
-    L_hs = L_hs(time(L_hs) > 2.0);
-    R_hs = R_hs(time(R_hs) > 2.0);
-
-    % plot the gait cycle durations for checking that data is good
-    % (we can perhaps automate this by detecting outliers)
-    Ltimes = time(L_hs);  % subtract time of frame 1
-    Rtimes = time(R_hs);
-    Lcycletimes = diff(Ltimes);
-    Rcycletimes = diff(Rtimes);
-    plot(Ltimes(1:end-1),Lcycletimes,Rtimes(1:end-1),Rcycletimes);
-    xlabel('time (s)');
-    ylabel('gait cycle duration (s)');
-    
-    
-
 end
 %=========================================================================================
 function result = gaitdeviation(data, hs, perturbtime, options)   
@@ -392,7 +337,9 @@ function result = gaitdeviation(data, hs, perturbtime, options)
         fprintf('Magnitude (T2max) of response:          %.3f\n',T2max);
         fprintf('Minimum p value (pmin) during response: %.3e\n',pmin);
         xlim = [tperturb-2 tperturb+10]; % the time range we want to plot
-        figure;
+        close all  % remove figures from screen
+
+        figure(1);
         subplot(2,1,1);
         plot(tnew,[T2new T2f]);
         title([data.latexname ': Hotelling T^2']);
