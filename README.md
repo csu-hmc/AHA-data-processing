@@ -39,7 +39,7 @@ This has only been tested on trial 1 in the Participant 4, Post-test folder.  It
 
 There are three tools: response.m, step_analysis.m, and mos.m, for respectively, the response to perturbations, the step time and step length, and the margin of stability.
 
-Each of these three codes is written so they can be easily tested on one trial, by executing them without inputs. You can do this by clicking the "Play" (right triangle) button in the Editor tab. This setup is not yet completed for step_analysis.m and mos.m.
+Each of these three codes is written so they can be easily tested on one trial, by executing them without inputs. You can do this by clicking the "Play" (right triangle) button in the Editor tab. 
 
 For processing a series of trials, see the "Workflow" section below.
 
