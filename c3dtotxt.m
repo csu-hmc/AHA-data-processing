@@ -29,7 +29,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             fprintf('Your computer name is: %s\n', computer);
             fprintf('Please configure c3dtotxt.m for your computer.\n');
         end
-        trial = 'Par12_POST\Mocap0002';
+        trial = 'Par6_POST\Mocap0002';
         txt_filename = [datapath trial '.txt'];
         c3d_filename = [datapath trial '.c3d'];
     end
@@ -116,7 +116,8 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     % If there are no markers in the TXT file (this happened in Par12_POST),
     % we add the standard 47-marker set and missing data for all markers and 
     % all frames. This allows processing to continue, and C3D marker data will be used
-    if numel(txtMarkerNames) == 0
+    % We also do this when the TXT file has unlabeled markers, 47 names all containing the letter M
+    if numel(txtMarkerNames) == 0 || sum(contains(txtMarkerNames,'M')) == 47
         txtMarkerNames = {'LHEAD' 'THEAD' 'RHEAD' 'FHEAD' 'C7'   'T10'  'SACR' 'NAVE'  'XYPH'  'STRN'  ...
                           'BBAC'  'LSHO'  'LDELT' 'LLEE'  'LMEE' 'LFRM' 'LMW'  'LLW'   'LFIN'  'RSHO'  ...
                           'RDELT' 'RLEE'  'RMEE'  'RFRM'  'RMW'  'RLW'  'RFIN' 'LASIS' 'RASIS' 'LPSIS' ...
