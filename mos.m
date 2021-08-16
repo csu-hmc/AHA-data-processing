@@ -3,7 +3,7 @@ function result = mos(data, detail)
     % data should be a data structure from a mocap file, from getdata.m
     % use detail=1 to show and pause the results
     %
-    % result will contain the mean and SD of the following variables:
+    % result is a table with one row and the following columns:
     % MOS_AP_left, MOS_AP_right, MOS_ML_right, MOS_ML_left
     % These are measured at each heelstrike, according to McAndrew Young et al 2012.
 
@@ -35,15 +35,15 @@ function result = mos(data, detail)
     RHEEz = getcolumn(data, 'RHEE.PosZ');
 	LTOEz = getcolumn(data, 'LTOE.PosZ');
     RTOEz = getcolumn(data, 'RTOE.PosZ');
-	LMT5x = getcolumn(data, 'LMT5.PosZ');
-    RMT5x = getcolumn(data, 'RMT5.PosZ');
+	LMT5x = getcolumn(data, 'LMT5.PosX');
+    RMT5x = getcolumn(data, 'RMT5.PosX');
     
     % calculate the mean distance from heel marker to Sacrum (in the sagittal YZ plane)
     Rdistance = sqrt( (SACRz-RHEEz).^2 + (SACRy-RHEEy).^2 );
     Ldistance = sqrt( (SACRz-LHEEz).^2 + (SACRy-LHEEy).^2 );
     L = mean([Rdistance ; Ldistance]); % everage leg length, used for XCoM calculation
     
-    % calculate the Sacrum velocity, and the extrapolated center of mass
+    % calculate the Sacrum velocity in X and Z direction, and the extrapolated center of mass
     SACRvx = velocity(time, SACRx);
     SACRvz = velocity(time, SACRz);
     g = 9.81;
@@ -59,14 +59,16 @@ function result = mos(data, detail)
     MOS_ML_right = -( XCoMx(Rhs) - RMT5x(Rhs) );  % because X is to the right
         
     % calculate mean and SD for all variables, and store in result
-    result.MOS_AP_left_mean  = mean(MOS_AP_left);
-    result.MOS_AP_left_SD    = std(MOS_AP_left);
-    result.MOS_AP_right_mean = mean(MOS_AP_right);
-    result.MOS_AP_right_SD   = std(MOS_AP_right);
-    result.MOS_ML_left_mean  = mean(MOS_ML_left);
-    result.MOS_ML_left_SD    = std(MOS_ML_left);
-    result.MOS_ML_right_mean = mean(MOS_ML_right);
-    result.MOS_ML_right_SD   = std(MOS_ML_right);
+    MOS_AP_left_mean  = mean(MOS_AP_left);
+    MOS_AP_left_SD    = std(MOS_AP_left);
+    MOS_AP_right_mean = mean(MOS_AP_right);
+    MOS_AP_right_SD   = std(MOS_AP_right);
+    MOS_ML_left_mean  = mean(MOS_ML_left);
+    MOS_ML_left_SD    = std(MOS_ML_left);
+    MOS_ML_right_mean = mean(MOS_ML_right);
+    MOS_ML_right_SD   = std(MOS_ML_right);
+    result = table(MOS_AP_left_mean, MOS_AP_left_SD, MOS_AP_right_mean, MOS_AP_right_SD, ...
+                   MOS_ML_left_mean, MOS_ML_left_SD, MOS_ML_right_mean, MOS_ML_right_SD);
     
     if (detail)
 		% plot the mos variables for all heelstrikes
@@ -82,10 +84,10 @@ function result = mos(data, detail)
         legend('Right','Left');
 
         fprintf('Length L for XCoM calculation: %8.3f m.\n', L);
-        fprintf('Left  AP MoS:   %8.3f %s %8.3f s.\n',result.MOS_AP_left_mean,char(177),result.MOS_AP_left_SD);
-        fprintf('Right AP MoS:   %8.3f %s %8.3f s.\n',result.MOS_AP_right_mean,char(177),result.MOS_AP_right_SD);
-        fprintf('Left  ML MoS:   %8.3f %s %8.3f s.\n',result.MOS_ML_left_mean,char(177),result.MOS_ML_left_SD);
-        fprintf('Right ML MoS:   %8.3f %s %8.3f s.\n',result.MOS_ML_right_mean,char(177),result.MOS_ML_right_SD);
+        fprintf('Left  AP MoS:   %8.3f %s %8.3f s.\n',MOS_AP_left_mean, char(177),MOS_AP_left_SD);
+        fprintf('Right AP MoS:   %8.3f %s %8.3f s.\n',MOS_AP_right_mean,char(177),MOS_AP_right_SD);
+        fprintf('Left  ML MoS:   %8.3f %s %8.3f s.\n',MOS_ML_left_mean, char(177),MOS_ML_left_SD);
+        fprintf('Right ML MoS:   %8.3f %s %8.3f s.\n',MOS_ML_right_mean,char(177),MOS_ML_right_SD);
         disp('Check Figure 1, and the results printed above, for problems');
     	disp('Hit ENTER to Continue')
 		pause

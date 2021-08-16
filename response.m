@@ -1,4 +1,4 @@
-function result = response(mocapdata, treadmilldata, options)
+function [result, mocapdata] = response(mocapdata, treadmilldata, options)
 % quantification of the perturbation response
 % 
 % Input:    mocapdata.......mocap data, from getdata() function
@@ -9,11 +9,11 @@ function result = response(mocapdata, treadmilldata, options)
 %               markerset17...(logical) use the set of 17 markers, rather than all markers (default 0)
 %               testing.......(logical) produce extra output for testing (default 1)
 %
-% Output:   result..........struct with the following fields
+% Output:   result..........table with one row and the following columns:
 %               t1............time when the perturbation response starts (relative to perturbation)
 %               t2............time when the perturbation response ends
 %               T2max.........maximum of the Hotelling T-squared after perturbation
-%               mocapdata.....mocap data after PCA reconstruction (no missing markers)
+%           mocapdata.....mocap data after PCA reconstruction (no missing markers)
 
     % use defaults for the options that were not specified
     if nargin < 3 , options = []; end
@@ -52,10 +52,10 @@ function result = response(mocapdata, treadmilldata, options)
     % the gaitdeviation function also estimates missing mocapdata
     if Lhs(PLhs) > Rhs(PRhs)    % which side was the last heelstrike before perturbation?
         fprintf('Left foot was in stance phase during perturbation\n');
-        result = gaitdeviation(mocapdata, Lhs, perturbtime, options);
+        [result,mocapdata] = gaitdeviation(mocapdata, Lhs, perturbtime, options);
     else
         fprintf('Right foot was in stance phase during perturbation\n');
-        result = gaitdeviation(mocapdata, Rhs, perturbtime, options);
+        [result,mocapdata] = gaitdeviation(mocapdata, Rhs, perturbtime, options);
     end
     
     if options.testing
@@ -70,7 +70,6 @@ function result = response(mocapdata, treadmilldata, options)
     % responses than the single variables.
     % To turn on the code, use "if (1)" in the following line.
     if (0) 
-        mocapdata = result.mocapdata;  % use the PCA-filed mocap data
         name = mocapdata.latexname;
         
         % calculate some descriptive variables
@@ -206,7 +205,7 @@ function [angles] = hipangles(data, side)
     
 end
 %=========================================================================================
-function result = gaitdeviation(data, hs, perturbtime, options)   
+function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)   
 % calculate gait deviation timing (t1,t2) using Mahalanobis Distance
 % and also estimate missing data
     
@@ -247,14 +246,10 @@ function result = gaitdeviation(data, hs, perturbtime, options)
 
     % estimate the covariance matrix using frames from gait cycles before the
     % perturbation, and those after the perturbation
-    disp('Estimating mean and covariance of marker data...');
-    disp('  (can take up to 6 min for full marker set, 30 seconds for 17 markers)');
     i1 = find(t(hs) < tperturb,    1, 'last');  % last heelstrike before perturbation
     i2 = find(t(hs) > tperturb+10, 1, 'first'); % first heelstrike ten seconds after perturbation
     normalframes = [hs(1):hs(i1) hs(i2):hs(end)];
-    tic
-    [mu,C] = ecmnmle(data.data(normalframes,columns));
-    toc
+    [mu,C] = ecmnmle_hash(data.data(normalframes,columns));
     Cinv = inv(C);
    
     % impute missing data using idea from Rasmussen 2020
@@ -323,11 +318,8 @@ function result = gaitdeviation(data, hs, perturbtime, options)
     T2max = max(T2f(it1:it2));
     pmin  = min(p(it1:it2));
     
-    % create the result structure
-    result.t1 = t1;
-    result.t2 = t2;
-    result.mocapdata = newdata;
-    result.T2max = T2max;
+    % create the result table
+    result = table(t1,t2,T2max);
     
     % write results on screen, make a figure to illustrate what was calculated
     % (only when testing)
@@ -375,3 +367,34 @@ function result = gaitdeviation(data, hs, perturbtime, options)
     end
 end
 %========================================================
+function [mu,C] = ecmnmle_hash(data)
+% estimate the mean and covariance of a data matrix
+% use a hash method to see if we already have done this before
+    % Convert data into a byte array called B...
+    B = typecast(data(:),'uint8');
+    % Or, as suggested, using the undocumented function getByteStreamFromArray:
+    % B = getByteStreamFromArray(data);
+
+    % Create an instance of a Java MessageDigest with the desired algorithm:
+    md = java.security.MessageDigest.getInstance('SHA-1');
+    md.update(B);
+
+    % Properly format the computed hash as an hexadecimal string:
+    hash = reshape(dec2hex(typecast(md.digest(),'uint8'))',1,[]);
+    
+    % Construct the filename and see if the file exists
+    filename = ['cache/' hash '.mat'];
+    if exist(filename)
+        % we have seen this data before, so simply reload the existing mean
+        % and covariance
+        disp('Loading mean and covariance data from cache...');
+        load(filename);
+    else
+        % we have not seen this data before, so we need to estimate
+        % the mean and covariance
+        disp('Estimating mean and covariance of marker data...');
+        disp('  (can take up to 6 min for full marker set, 30 seconds for 17 markers)');
+        [mu,C] = ecmnmle(data);
+        save(filename,'mu','C');  % save the result for later
+    end
+end

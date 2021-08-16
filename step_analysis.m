@@ -2,6 +2,7 @@ function result = step_analysis(data, detail)
     % analysis of step time and step length
     % data should be a data structure from a mocap file, from getdata.m
     % use detail=1 to show and pause the results
+    % result is a table with one row and 8 columns: mean and SD of step time and step length (left and right)
         
     % if no input is specified, we use one particular file for testing
     if nargin < 1
@@ -77,14 +78,16 @@ function result = step_analysis(data, detail)
 %     ST_R = rmoutliers(ST_R);
     
     % calculate mean and SD for all variables, and store in result
-    result.ST_left_mean  = mean(ST_L);
-    result.ST_left_SD    = std(ST_L);
-    result.ST_right_mean = mean(ST_R);
-    result.ST_right_SD   = std(ST_R);
-    result.SL_left_mean  = mean(SL_L);
-    result.SL_left_SD    = std(SL_L);
-    result.SL_right_mean = mean(SL_R);
-    result.SL_right_SD   = std(SL_R);
+    ST_left_mean  = mean(ST_L);
+    ST_left_SD    = std(ST_L);
+    ST_right_mean = mean(ST_R);
+    ST_right_SD   = std(ST_R);
+    SL_left_mean  = mean(SL_L);
+    SL_left_SD    = std(SL_L);
+    SL_right_mean = mean(SL_R);
+    SL_right_SD   = std(SL_R);
+    result = table(ST_left_mean,ST_left_SD,ST_right_mean,ST_right_SD, ...
+                   SL_left_mean,SL_left_SD,SL_right_mean,SL_right_SD);
     
     if (detail)
 		% plot the step times and step lengths
@@ -99,10 +102,10 @@ function result = step_analysis(data, detail)
 		ylabel('step length (m)')
         legend('Right','Left');
 
-        fprintf('Left  step time:   %8.3f %s %8.3f s.\n',result.ST_left_mean,char(177),result.ST_left_SD);
-        fprintf('Right step time:   %8.3f %s %8.3f s.\n',result.ST_right_mean,char(177),result.ST_right_SD);
-        fprintf('Left  step length: %8.3f %s %8.3f s.\n',result.SL_left_mean,char(177),result.SL_left_SD);
-        fprintf('Right step length: %8.3f %s %8.3f s.\n',result.SL_right_mean,char(177),result.SL_right_SD);
+        fprintf('Left  step time:   %8.3f %s %8.3f s.\n',ST_left_mean,char(177),ST_left_SD);
+        fprintf('Right step time:   %8.3f %s %8.3f s.\n',ST_right_mean,char(177),ST_right_SD);
+        fprintf('Left  step length: %8.3f %s %8.3f s.\n',SL_left_mean,char(177),SL_left_SD);
+        fprintf('Right step length: %8.3f %s %8.3f s.\n',SL_right_mean,char(177),SL_right_SD);
         disp('Check Figure 1, and the results printed above, for problems');
         disp('(affected side should have lower step length, can even be negative if foot drags behind)');
     	disp('Hit ENTER to Continue')

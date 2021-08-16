@@ -17,10 +17,10 @@ function processdata(folder, detail)
     if exist(excelfile), delete(excelfile); end
     if exist(tmppsfile), delete(tmppsfile); end
     if exist(excelfile) 
-        error('%s is open in another application. Close it and retry.', excelfile);
+        error('Could not delete %s. It may be open in another application. Close it and retry.', excelfile);
     end
     if exist(tmppsfile) 
-        error('%s is open in another application. Close it and retry.', tmppsfile);
+        error('Could not delete %s. It may be open in another application. Close it and retry.', tmppsfile);
     end
     
     % turn detail off if not specified
@@ -30,79 +30,77 @@ function processdata(folder, detail)
 
     % load the list of files that must be processed
     filelist = importdata([folderpath '0FileList.txt']);
-    for trial_num = 1:numel(filelist)
-        name = strtrim(filelist{trial_num});
-        name = [folder '\' name];
-        fprintf('   ...%s\n', name);
-        TrialNum(trial_num,1) = trial_num;
-        FileName{trial_num,1} = name;
-        [mocapdata,treadmilldata] = getdata(name, detail);
+    
+    % process all files in the list, and create a table with all results
+    T = table;  % start with an empty table
+    for TrialNum = 1:numel(filelist)
+        FileName = strtrim(filelist{TrialNum});  % make sure file name has no leading or trailing spaces
+        FileName = [folder '\' FileName];
+        fprintf('   ...%s\n', FileName);
+        [mocapdata,treadmilldata] = getdata(FileName, detail);
         
         % do the analysis of the perturbation response and store result
         options.testing = detail;
         options.markerset17 = 1;  % use the smaller marker set
-        result = response(mocapdata, treadmilldata, options);
-        T2max(trial_num,1) = result.T2max;
-        t2(trial_num,1)    = result.t2;
-        mocapdata = result.mocapdata;  % use the PCA-filled mocap data for the other measures
+        [result1, mocapdata] = response(mocapdata, treadmilldata, options);  % mocapdata now has PCA-filed data!
         
         % do the step analysis and store result
-        result = step_analysis(mocapdata, detail);
-        ST_right_mean(trial_num,1) = result.ST_right_mean;
-        ST_right_SD(trial_num,1)   = result.ST_right_SD;
-        ST_left_mean(trial_num,1)  = result.ST_left_mean;
-        ST_left_SD(trial_num,1)    = result.ST_left_SD;
-        SL_right_mean(trial_num,1) = result.SL_right_mean;
-        SL_right_SD(trial_num,1)   = result.SL_right_SD;
-        SL_left_mean(trial_num,1)  = result.SL_left_mean;
-        SL_left_SD(trial_num,1)    = result.SL_left_SD;
+        result2 = step_analysis(mocapdata, detail);
         
         % do the Margin of Stability analysis during normal walking (20
         % seconds)
-        % ...
+        result3 = mos(mocapdata, detail);
+        
+        % add results from this trial to the table T
+        T = [T ; table(TrialNum) table({FileName}) result1 result2 result3];
         
     end
 
-    % make a table with all results and write it on the Excel file
-    T = table(TrialNum, FileName, ...
-        T2max, t2, ...         
-        ST_left_mean,ST_left_SD,ST_right_mean,ST_right_SD, ...
-        SL_left_mean,SL_left_SD,SL_right_mean,SL_right_SD);     
+    % convert the table to an Excel file   
     writetable(T, excelfile);
 
-    %% plot results of the step analysis, showing trend over the trials
-    if detail
-        fig2 = figure(2);
-        subplot(2,2,1)
-        errorbar(T.SL_left_mean, T.SL_left_SD)
-        ylabel('Left Step Length (m)')
-        xlabel('Trial')
-        ylim([0 0.5])
-        xlim([0, 16])
+    %% plot results of the step analysis and MOS, showing trend over the trials
+    fig2 = figure(2);
+    latexfolder = strrep(folder,'\','/');
+    latexfolder = strrep(latexfolder,'_','\_');  % make foldername suitable for plot title
+    trials = T.TrialNum;
 
-        subplot(2,2,2)
-        errorbar(T.SL_right_mean, T.SL_right_SD)
-        ylabel('Right Step Length (m)')
-        xlabel('Trial')
-        ylim([0 0.5])
-        xlim([0, 16])
+    subplot(2,2,1)
+    errorbar([trials trials], ...
+        [T.SL_left_mean T.SL_right_mean], [T.SL_left_SD T.SL_right_SD])
+    set(gca,'XLim',[min(trials)-0.5 max(trials)+0.5]);
+    ylabel('Step Length (m)')
+    xlabel('Trial')
+    title(latexfolder)
 
-        subplot(2, 2, 3)
-        errorbar(T.ST_left_mean, T.ST_left_SD)
-        ylabel('Left Step Time (s)')
-        xlabel('Trial')
-        ylim([0.4 1.4])
-        xlim([0, 16])
+    subplot(2,2,2)
+    errorbar([trials trials], ...
+        [T.ST_left_mean T.ST_right_mean], [T.ST_left_SD T.ST_right_SD])
+    set(gca,'XLim',[min(trials)-0.5 max(trials)+0.5]);
+    ylabel('Step Time (s)')
+    xlabel('Trial')
+    title(latexfolder)
 
-        subplot(2, 2, 4)
-        errorbar(T.ST_right_mean, T.ST_right_SD)
-        ylabel('Right Step Time (s)')
-        xlabel('Trial')
-        ylim([0.4 1.4])
-        xlim([0, 16])
+    subplot(2,2,3)
+    errorbar([trials trials], ...
+        [T.MOS_AP_left_mean T.MOS_AP_right_mean], [T.MOS_AP_left_SD T.MOS_AP_right_SD])
+    set(gca,'XLim',[min(trials)-0.5 max(trials)+0.5]);
+    ylabel('MOS AP (m)')
+    xlabel('Trial')
+    title(latexfolder)
 
-        saveas(fig2, strcat(folderpath, '0step_analysis.png'))
+    subplot(2,2,4)
+    errorbar([trials trials], ...
+        [T.MOS_ML_left_mean T.MOS_ML_right_mean], [T.MOS_ML_left_SD T.MOS_ML_right_SD])
+    set(gca,'XLim',[min(trials)-0.5 max(trials)+0.5]);
+    ylabel('MOS ML (m)')
+    xlabel('Trial')
+    title(latexfolder)
 
+    legend('left','right')
+    saveas(fig2, strcat(folderpath, '0step_analysis.png'))
+    
+    if (detail)
         disp('Check Figure 2 for problems.');
         disp('Hit ENTER to continue');
     end
