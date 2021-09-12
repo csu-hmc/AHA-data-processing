@@ -283,12 +283,11 @@ function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)
     % we could now estimate mean and covariance again, but result is
     % extremely close to what we already have (I checked)
 
-    % Calculate the Mahalanobis distance (squared) of each frame to the mean
+    % Calculate the Mahalanobis distance of each frame to the mean
     % We could also do this from the original incomplete data (see
     % notebook 3/23/2021) but result is exactly the same.
     % We could also do this after subtracting the average gait cycle, but
     % again, result is (almost) exactly the same.
-    % This quantity is also known at the "Hotelling T-squared" statistic
     drel = newdata.data(:,columns)-repmat(mu',nsamples,1);
     T2 = dot(drel * Cinv, drel, 2);
             
@@ -300,11 +299,12 @@ function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)
     [b,a] = butter(2,Fc/(Fs/2));
     T2f = filtfilt(b,a,T2new);
     
-    % calculate p values from the Hotelling T-squared statistic
+    % calculate p values from the T2, which has
+    % a Chi-squared distribution with ncolumns degrees of freedom
     % See https://en.wikipedia.org/wiki/Hotelling%27s_T-squared_distribution
-    np = ncolumns;
-    n = nsamples;
-    p = fcdf(T2f*(n-np)/np/(n-1),np,n-np,'upper');
+    % we could calculate p directly from marker data: p = mvncdf(data, mu, C)
+    % but Chi-squared is easier to explain, and we already have the T2f anyway
+    p = chi2cdf(T2f, ncolumns, 'upper');
     
     % gait deviation measure is the duration of the period when p<threshold
     threshold = options.pvalue;
