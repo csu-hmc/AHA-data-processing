@@ -319,6 +319,9 @@ function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)
     pmin  = min(p(it1:it2));
     
     % create the result table
+    if isempty(t1), t1 = 9999, end
+    if isempty(t2), t2 = 9999, end
+    if isempty(T2max), T2max = 9999, end
     result = table(t1,t2,T2max);
     
     % write results on screen, make a figure to illustrate what was calculated
