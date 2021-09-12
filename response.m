@@ -372,6 +372,9 @@ function [mu,C] = ecmnmle_hash(data)
 % use a hash method to see if we already have done this before
     % Convert data into a byte array called B...
     B = typecast(data(:),'uint8');
+    if (isempty(B))
+        error('ecmnmle_hash: B is empty, you may not have any marker data');
+    end
     % Or, as suggested, using the undocumented function getByteStreamFromArray:
     % B = getByteStreamFromArray(data);
 
