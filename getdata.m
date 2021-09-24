@@ -18,7 +18,7 @@ function [mocapdata,treadmilldata] = getdata(name, detail)
 
     % make new time stamps (we know that Cortex sends data at exactly 100 Hz
     mocapdata.data(:,1) = mocapdata.data(1,1) + 0.01 * (0:(size(mocapdata.data,1)-1));
-   
+        
     % construct treadmill filename from the trial number and import that file too
     if nargout > 1   % do this only if the treadmill data is needed
         num = extract(name, digitsPattern);
@@ -60,7 +60,7 @@ function [mocapdata,treadmilldata] = getdata(name, detail)
         close all
 		figure(1)
         screen = get(0,'screensize');
-        set(gcf,'Position',[1 floor(0.5*screen(4)) 1280 floor(0.5*screen(4))]); % use top of the screen
+        set(gcf,'Position',[1 floor(0.5*screen(4)) 1280 floor(0.45*screen(4))]); % use top of the screen
 		
         % break it up into 3 subplots
         duration = time(end)/3;  % duration of each plot
@@ -80,6 +80,7 @@ function [mocapdata,treadmilldata] = getdata(name, detail)
         disp('(problems in the last 30 seconds can be ignored)');
         disp('Hit ENTER to continue, CTRL-C to quit');
         pause
+              
     end
 end
 %==================================================
