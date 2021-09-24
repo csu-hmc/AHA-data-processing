@@ -10,7 +10,7 @@ function result = mos(data, detail)
     % if no input is specified, we use one particular file for testing
     if nargin < 1
         detail = 1;
-        data = getdata('Par3_PRE\Mocap0007.txt', 1);  % we only need the mocap data
+        data = getdata('Par7_POST\Mocap0001.txt', 1);  % we only need the mocap data
     end
     
     fprintf('MoS analysis for %s\n', data.name);
@@ -23,7 +23,7 @@ function result = mos(data, detail)
 	ed = 30; % ending time
     time = data.data(:,1)-data.data(1,1);  % time relative to start of file
     Lhs = Lhs( (time(Lhs) >= st) & (time(Lhs) <= ed) );
-    Rhs = Rhs( (time(Rhs) >= st) & (time(Rhs) <= ed) );
+    Rhs = Rhs( (time(Rhs) >= st) & (time(Rhs) <= ed) );  
     
     % extract the required marker data   
     SACRx = getcolumn(data, 'SACR.PosX');
@@ -39,9 +39,10 @@ function result = mos(data, detail)
     RMT5x = getcolumn(data, 'RMT5.PosX');
     
     % calculate the mean distance from heel marker to Sacrum (in the sagittal YZ plane)
+    frames = (time >= st) & (time <= ed);  % use only these frames for length calculation
     Rdistance = sqrt( (SACRz-RHEEz).^2 + (SACRy-RHEEy).^2 );
     Ldistance = sqrt( (SACRz-LHEEz).^2 + (SACRy-LHEEy).^2 );
-    L = mean([Rdistance ; Ldistance]); % everage leg length, used for XCoM calculation
+    L = mean([Rdistance(frames) ; Ldistance(frames)]); % average leg length, used for XCoM calculation
     
     % calculate the Sacrum velocity in X and Z direction, and the extrapolated center of mass
     SACRvx = velocity(time, SACRx);
@@ -94,11 +95,6 @@ function result = mos(data, detail)
     end
     disp('MoS analysis (mos.m) completed.');
 
-end
-%==================================================
-function fraction = missing(x)
-    missingframes = find(isnan(x));
-    fraction = numel(missingframes) / numel(x);
 end
 %==================================================
 function v = velocity(t,x)
