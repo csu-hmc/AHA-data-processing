@@ -25,7 +25,7 @@ function [result, mocapdata] = response(mocapdata, treadmilldata, options)
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         options.testing = 1;
-        [mocapdata,treadmilldata] = getdata('Par3_PRE\Mocap0007.txt', 1);
+        [mocapdata,treadmilldata] = getdata('Par2_POST\Mocap0001.txt', 1);
     end
     
     fprintf('Perturbation response analysis for %s\n', mocapdata.name);
@@ -319,9 +319,9 @@ function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)
     pmin  = min(p(it1:it2));
     
     % create the result table
-    if isempty(t1), t1 = 9999, end
-    if isempty(t2), t2 = 9999, end
-    if isempty(T2max), T2max = 9999, end
+    if isempty(t1), t1 = NaN, end
+    if isempty(t2), t2 = NaN, end
+    if isempty(T2max), T2max = NaN, end
     result = table(t1,t2,T2max);
     
     % write results on screen, make a figure to illustrate what was calculated
