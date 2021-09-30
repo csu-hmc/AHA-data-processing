@@ -1,6 +1,7 @@
-function result = mos(data, detail)
+function result = mos(data, tmdata, detail)
     % analysis of Margin of Stability
     % data should be a data structure from a mocap file, from getdata.m
+    % tmdata should be the corresponding treadmill data, also from getdata.m
     % use detail=1 to show and pause the results
     %
     % result is a table with one row and the following columns:
@@ -10,7 +11,7 @@ function result = mos(data, detail)
     % if no input is specified, we use one particular file for testing
     if nargin < 1
         detail = 1;
-        data = getdata('Par7_POST\Mocap0001.txt', 1);  % we only need the mocap data
+        [data,tmdata] = getdata('Par7_POST\Mocap0001.txt', 1);  % we only need the mocap data
     end
     
     fprintf('MoS analysis for %s\n', data.name);
@@ -42,11 +43,18 @@ function result = mos(data, detail)
     frames = (time >= st) & (time <= ed);  % use only these frames for length calculation
     Rdistance = sqrt( (SACRz-RHEEz).^2 + (SACRy-RHEEy).^2 );
     Ldistance = sqrt( (SACRz-LHEEz).^2 + (SACRy-LHEEy).^2 );
-    L = mean([Rdistance(frames) ; Ldistance(frames)]); % average leg length, used for XCoM calculation
+    L = mean([Rdistance(frames) ; Ldistance(frames)], 'omitnan'); % average leg length, used for XCoM calculation
+    
+    % find the treadmill belt speed between 10 and 30 seconds
+    tmtime = tmdata.data(:,1)-tmdata.data(1,1);  % time relative to start of file
+    frames = (tmtime >= st) & (tmtime <= ed);  % use only these frames for length calculation
+    beltspeed = mean(tmdata.data(frames,3));  % from column 3
     
     % calculate the Sacrum velocity in X and Z direction, and the extrapolated center of mass
-    SACRvx = velocity(time, SACRx);
-    SACRvz = velocity(time, SACRz);
+    [SACRvx, SACRx] = velocity(time, SACRx);
+    [SACRvz, SACRz] = velocity(time, SACRz);
+    % the belt moves in the +Z direction, so we need to subtract belt speed to get SACR velocity relative to belt
+    SACRvz = SACRvz - beltspeed;
     g = 9.81;
     w0 = sqrt(g/L);
     XCoMx = SACRx + SACRvx / w0;
@@ -97,8 +105,9 @@ function result = mos(data, detail)
 
 end
 %==================================================
-function v = velocity(t,x)
+function [v,x] = velocity(t,x)
     % find the velocity v(t) for the position data x(t)
+    % outputs the velocity v and the low-pass filtered position x
     cutoff_freq = 6.0;  % Hz, low pass filter to reduce noise in velocity
     Fs = 1/mean(diff(t)); % sampling frequency
     if std(diff(t)) > 0.001

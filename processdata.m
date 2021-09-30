@@ -49,7 +49,7 @@ function processdata(folder, detail)
         
         % do the Margin of Stability analysis during normal walking (20
         % seconds)
-        result3 = mos(mocapdata, detail);
+        result3 = mos(mocapdata, treadmilldata, detail);
         
         % add results from this trial to the table T
         T = [T ; table(TrialNum) table({FileName}) result1 result2 result3];
