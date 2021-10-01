@@ -7,6 +7,13 @@ function [mocapdata,treadmilldata] = getdata(name, detail)
    
     % find the path to the shared data folders
     path = getpath();  
+    
+    % see if an edited version of the file exists
+    editedname = strrep(name, '.txt', '_edited.txt');
+    if exist([path editedname])
+        name = editedname;
+        fprintf('Using %s because it exists.\n', name);
+    end
 
     % import the mocap data
     mocapdata = importdata([path name]);
