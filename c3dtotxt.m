@@ -29,7 +29,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             fprintf('Your computer name is: %s\n', computer);
             fprintf('Please configure c3dtotxt.m for your computer.\n');
         end
-        trial = 'Par6_POST\Mocap0002';
+        trial = 'Par11_PRE\Mocap0002';
         txt_filename = [datapath trial '.txt'];
         c3d_filename = [datapath trial '.c3d'];
     end
@@ -165,7 +165,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     else
         RMSdiff = rms(c3dFyr(1:1000,1)-Fy1(lag+(1:1000)));
     end    
-    maxdiff = 10.0;   % we allow a difference of 10 N
+    maxdiff = 20.0;   % we allow a difference of 10 N
     if (RMSdiff > maxdiff)
         if (lag<0)
             plot([Fy1(1:1000) c3dFyr(-lag+(1:1000),1)]);
@@ -282,7 +282,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     fprintf(log,'Writing %s...\n', filename);
     fid = fopen(filename,'w');
     if (fid < 0)
-        warning('cannot write %s', filename);
+        error('cannot write %s', filename);
         result.info = 2;
         return
     end
@@ -308,7 +308,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     % info = 0 to indicate success
     result.info = 0;
     
-    % if we are not testing, we are done and we exist this function
+    % if we are not testing, we are done and we exit this function
     if ~testing
         return
     end

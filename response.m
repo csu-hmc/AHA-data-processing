@@ -25,7 +25,7 @@ function [result, mocapdata] = response(mocapdata, treadmilldata, options)
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         options.testing = 1;
-        [mocapdata,treadmilldata] = getdata('Par2_POST\Mocap0001.txt', 1);
+        [mocapdata,treadmilldata] = getdata('Par9_PRE\Mocap0004.txt', 1);
     end
     
     fprintf('Perturbation response analysis for %s\n', mocapdata.name);
