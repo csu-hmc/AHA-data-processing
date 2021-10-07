@@ -29,7 +29,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             fprintf('Your computer name is: %s\n', computer);
             fprintf('Please configure c3dtotxt.m for your computer.\n');
         end
-        trial = 'Par11_PRE\Mocap0002';
+        trial = 'Par1_POST\Mocap0001';
         txt_filename = [datapath trial '.txt'];
         c3d_filename = [datapath trial '.c3d'];
     end
@@ -175,6 +175,8 @@ function result = c3dtotxt(c3d_filename, txt_filename)
         legend('Fy1 TXT','Fy1 C3D')
         fprintf('ERROR: Vertical force of forceplate 1 does not agree within %.1f N\n',maxdiff);
         fprintf(log,'ERROR: Based on force plate data, it seems that TXT and C3D are not the same trial');
+        disp('type dbcont if you want to continue anyway');
+        keyboard
     end
     
     % set up the copying of marker data from c3d to txt
