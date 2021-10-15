@@ -21,11 +21,12 @@ function [result, mocapdata] = response(mocapdata, treadmilldata, options)
     if ~isfield(options,'pvalue') , options.pvalue = 0.001; end
     if ~isfield(options,'testing') , options.testing = 0; end
     if ~isfield(options,'markerset17') , options.markerset17 = 1; end
+    if ~isfield(options,'seconds10_30'), options.seconds10_30 = 0; end
     
     % if no file is specified, we use one particular file for testing
     if nargin < 1
         options.testing = 1;
-        [mocapdata,treadmilldata] = getdata('Par9_PRE\Mocap0004.txt', 1);
+        [mocapdata,treadmilldata] = getdata('Par12_POST\Mocap0001_edited.txt', 1);
     end
     
     fprintf('Perturbation response analysis for %s\n', mocapdata.name);
@@ -245,10 +246,14 @@ function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)
     ncolumns = numel(columns);
 
     % estimate the covariance matrix using frames from gait cycles before the
-    % perturbation, and those after the perturbation
-    i1 = find(t(hs) < tperturb,    1, 'last');  % last heelstrike before perturbation
-    i2 = find(t(hs) > tperturb+10, 1, 'first'); % first heelstrike ten seconds after perturbation
-    normalframes = [hs(1):hs(i1) hs(i2):hs(end)];
+    % perturbation, and those after the perturbation, or from seconds 10-30
+    if options.seconds10_30
+        normalframes = 1000:3000;
+    else
+        i1 = find(t(hs) < tperturb,    1, 'last');  % last heelstrike before perturbation
+        i2 = find(t(hs) > tperturb+10, 1, 'first'); % first heelstrike ten seconds after perturbation
+        normalframes = [hs(1):hs(i1) hs(i2):hs(end)];
+    end
     [mu,C] = ecmnmle_hash(data.data(normalframes,columns));
     Cinv = inv(C);
    

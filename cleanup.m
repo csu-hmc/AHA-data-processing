@@ -54,7 +54,7 @@ function [d] = cleanup(d)
                 end
                 
                 % interpolate across the gaps that are not too large
-                d.data(interpframes,markercolumns) = interp1(times(goodframes), d.data(goodframes,i:i+2), times(interpframes), 'linear', 'extrap');
+                d.data(interpframes,markercolumns) = interp1(times(goodframes), d.data(goodframes,i:i+2), times(interpframes), 'linear');
             end
         end
     end

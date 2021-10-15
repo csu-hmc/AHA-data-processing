@@ -29,7 +29,7 @@ function result = c3dtotxt(c3d_filename, txt_filename)
             fprintf('Your computer name is: %s\n', computer);
             fprintf('Please configure c3dtotxt.m for your computer.\n');
         end
-        trial = 'Par10_POST\Mocap0001';
+        trial = 'Par12_POST\Mocap0001';
         txt_filename = [datapath trial '.txt'];
         c3d_filename = [datapath trial '.c3d'];
     end
@@ -134,8 +134,10 @@ function result = c3dtotxt(c3d_filename, txt_filename)
     % C3D sometimes only has the first 4 characters of the marker name
     % so we try to match them.  
     % also remove 'FullBodyef:' which sometimes occurs in a C3D marker name
+    % also remove 'FULLBODY47:' which sometimes occurs in a C3D marker name
     for i = 1:numel(c3dMarkerNames)
         c3dMarkerNames{i} = strrep(c3dMarkerNames{i},'FullBodyef:','');
+        c3dMarkerNames{i} = strrep(c3dMarkerNames{i},'FULLBODY47:','');
         matches = find(strncmp(txtMarkerNames,c3dMarkerNames{i},4));
         if numel(matches) == 0
             error('Marker %s was not found in the original TXT file',c3dMarkerNames{i});

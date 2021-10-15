@@ -41,7 +41,8 @@ function processdata(folder, detail)
         
         % do the analysis of the perturbation response and store result
         options.testing = detail;
-        options.markerset17 = 1;  % use the smaller marker set
+        options.markerset17 = 1;  % use 1 to use the smaller marker set
+        options.seconds10_30 = 0; % use 1 to use only 20 seconds of normal walking
         [result1, mocapdata] = response(mocapdata, treadmilldata, options);  % mocapdata now has PCA-filed data!
         
         % do the step analysis and store result
