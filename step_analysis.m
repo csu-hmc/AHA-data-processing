@@ -7,7 +7,7 @@ function result = step_analysis(data, detail)
     % if no input is specified, we use one particular file for testing
     if nargin < 1
         detail = 1;
-        data = getdata('Par3_PRE\Mocap0007.txt', 1);  % we only need the mocap data
+        data = getdata('Par8_PRE\Mocap0001.txt', 1);  % we only need the mocap file
     end
 
     fprintf('Step analysis for %s\n', data.name);
@@ -22,24 +22,24 @@ function result = step_analysis(data, detail)
     L_hs = L_hs( (time(L_hs) >= st) & (time(L_hs) <= ed) );
     R_hs = R_hs( (time(R_hs) >= st) & (time(R_hs) <= ed) );
     
-    % force the left and right legs to have the same number of steps, cut off by
-    % the end steps
-    num_step_min = min(length(L_hs), length(R_hs));
-    L_hs = L_hs(1:num_step_min);
-    R_hs = R_hs(1:num_step_min);    % extract the heel Z trajectory
-    
-    % calculate step times and step lengths
-    % definitions: Wall et al., Clinical Biomechanics 1987; 2: 119-125
-    % NOTE: I changed the variable names, ST_R is the step time when the
-    % right leg is stepping (and left is in stance phase)
-    if L_hs(1) < R_hs(1)
-        ST_R =  time(R_hs) - time(L_hs);
-        ST_L =  time(L_hs(2:end)) - time(R_hs(1:end-1));
-    else
-        ST_R = time(R_hs(2:end)) - time(L_hs(1:end-1));
-        ST_L = time(L_hs) - time(R_hs);
+    % find the left step times, which are RHS to LHS, as long as no RHS comes before the LHS
+    ST_L = [];
+    for i = 1:numel(R_hs)-1
+        nextLHS = min(L_hs(L_hs > R_hs(i)));
+        if nextLHS < R_hs(i+1)
+            ST_L = [ST_L time(nextLHS)-time(R_hs(i))];
+        end
     end
     
+    % find the right step times, which are LHS to RHS, as long as no LHS comes before the RHS
+    ST_R = [];
+    for i = 1:numel(L_hs)-1
+        nextRHS = min(R_hs(R_hs > L_hs(i)));
+        if nextRHS < L_hs(i+1)
+            ST_R = [ST_R time(nextRHS)-time(L_hs(i))];
+        end
+    end
+        
     % step lengths, this requires marker data   
 	left_HEEL  = getcolumn(data, 'LHEE.PosZ');
     right_HEEL = getcolumn(data, 'RHEE.PosZ');
