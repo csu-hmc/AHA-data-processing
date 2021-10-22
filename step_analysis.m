@@ -7,7 +7,7 @@ function result = step_analysis(data, detail)
     % if no input is specified, we use one particular file for testing
     if nargin < 1
         detail = 1;
-        data = getdata('Par8_PRE\Mocap0001.txt', 1);  % we only need the mocap file
+        data = getdata('Par12_POST\Mocap0008.txt', 1);  % we only need the mocap file
     end
 
     fprintf('Step analysis for %s\n', data.name);
@@ -70,12 +70,28 @@ function result = step_analysis(data, detail)
         SL_L = NaN(size(L_hs));
         SL_R = NaN(size(R_hs));
     end
+    
+    if (0)     % use if(1) to see details of the step length analysis
+        close all
+        H = [right_HEEL left_HEEL];
+        Hmax = max(max(H));
+        Hmin = min(min(H));
+        plot(time,H)
+        hold on
+        hs = [L_hs ; R_hs];
+        for i=1:numel(hs)
+            plot(time([hs(i) hs(i)]),[Hmin Hmax],'k')
+        end
+        set(gca,'XLim',[time(min(hs))-1 time(max(hs))+1]);
+        legend('LHEE.PosZ','RHEE.PosZ')
+        keyboard
+    end
   
     % remove the outliers
-%     SL_L = rmoutliers(SL_L);
-%     SL_R = rmoutliers(SL_R);
-%     ST_L = rmoutliers(ST_L);
-%     ST_R = rmoutliers(ST_R);
+    SL_L = rmoutliers(SL_L);
+    SL_R = rmoutliers(SL_R);
+    ST_L = rmoutliers(ST_L);
+    ST_R = rmoutliers(ST_R);
     
     % calculate mean and SD for all variables, and store in result
     ST_left_mean  = mean(ST_L);
