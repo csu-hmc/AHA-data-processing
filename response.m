@@ -255,6 +255,12 @@ function [result, newdata] = gaitdeviation(data, hs, perturbtime, options)
         normalframes = [hs(1):hs(i1) hs(i2):hs(end)];
     end
     [mu,C] = ecmnmle_hash(data.data(normalframes,columns));
+    
+    % if the covariance estimation failed, use NaN as result and quit this function
+    if isempty(mu)
+        result = table(NaN, NaN, NaN);
+        return
+    end
     Cinv = inv(C);
    
     % impute missing data using idea from Rasmussen 2020
@@ -381,7 +387,10 @@ function [mu,C] = ecmnmle_hash(data)
     % Convert data into a byte array called B...
     B = typecast(data(:),'uint8');
     if (isempty(B))
-        error('ecmnmle_hash: B is empty, you may not have any marker data');
+        warning('ecmnmle_hash: B is empty, you may not have any marker data');
+        mu = [];
+        C = [];
+        return
     end
     % Or, as suggested, using the undocumented function getByteStreamFromArray:
     % B = getByteStreamFromArray(data);

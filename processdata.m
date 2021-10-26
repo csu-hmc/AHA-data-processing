@@ -8,18 +8,26 @@ function processdata(folder, detail)
     %   0<foldername>.xlsx..........Discrete variables from each trial
     %   0step_analysis.png..........Step variables plotted over the session
     
-    % use the folder name to create the name of the Excel file
+    % construct the full path to the data folder 
+    % and decide where to put the results
     folderpath = [getpath() folder '\'];
-    excelfile = [folderpath '0' folder '.xlsx'];
-    tmppsfile = [folderpath 'tmp.ps'];
+    sharedresults = 0;  % 1 to store results in shared folder, 0 to store results only locally
+    if (sharedresults)
+        % store results in the (shared) data folder
+        pdffile   = [folderpath '0' folder 'step_analysis.pdf']; 
+        excelfile = [folderpath '0' folder '.xlsx'];
+    else
+        pdffile   = ['C:\Users\Ton\Desktop\AHA results\' folder 'step_analysis.pdf']; 
+        excelfile = ['C:\Users\Ton\Desktop\AHA results\' folder '.xlsx']; 
+    end
     
     % delete any files that may have been created previously
     if exist(excelfile), delete(excelfile); end
-    if exist(tmppsfile), delete(tmppsfile); end
+    if exist(pdffile), delete(pdffile); end
     if exist(excelfile) 
         error('Could not delete %s. It may be open in another application. Close it and retry.', excelfile);
     end
-    if exist(tmppsfile) 
+    if exist(pdffile) 
         error('Could not delete %s. It may be open in another application. Close it and retry.', tmppsfile);
     end
     
@@ -99,7 +107,7 @@ function processdata(folder, detail)
     title(latexfolder)
 
     legend('left','right')
-    saveas(fig2, strcat(folderpath, '0step_analysis.png'))
+    print(pdffile, '-dpdf');
     
     if (detail)
         disp('Check Figure 2 for problems.');
